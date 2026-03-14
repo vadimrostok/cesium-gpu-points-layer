@@ -36,5 +36,20 @@
     "cesium": "^1.139.0",
     "typescript": "^5.9.2",
     "rimraf": "^6.0.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vadimrostok/cesium-gpu-points-layer.git"
+  },
+  "keywords": [
+    "cesium",
+    "gpu sprites",
+    "gpu points",
+    "GIS",
+    "performance",
+    "packed textures",
+    "custom point sprites"
+  ],
+  "author": "Vadym Rostok",
+  "homepage": "https://github.com/vadimrostok/cesium-gpu-points-layer#readme"
 }
