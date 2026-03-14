@@ -1,6 +1,6 @@
 {
   "name": "cesium-gpu-points-layer",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "High-performance Cesium GPU point rendering layer using packed textures and custom point sprites.",
   "type": "module",
   "license": "MIT",
