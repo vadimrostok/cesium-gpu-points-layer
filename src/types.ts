@@ -1,5 +1,107 @@
 import * as Cesium from 'cesium';
 
+export interface ContextLike {
+  defaultTexture: unknown;
+  floatingPointTexture: boolean;
+  webgl2: boolean;
+}
+
+export interface BufferLike {
+  destroy(): void;
+}
+
+export interface TextureLike {
+  copyFrom(options: {
+    source: {
+      arrayBufferView: Float32Array | Uint8Array;
+      height: number;
+      width: number;
+    };
+  }): void;
+  destroy(): void;
+}
+
+export interface VertexArrayLike {
+  destroy(): void;
+}
+
+export interface ShaderProgramLike {
+  destroy(): void;
+}
+
+export interface DrawCommandLike {
+  boundingVolume?: Cesium.BoundingSphere;
+  count: number;
+  cull: boolean;
+  owner?: unknown;
+  pass: unknown;
+  primitiveType: unknown;
+  renderState?: unknown;
+  shaderProgram?: ShaderProgramLike;
+  uniformMap?: Record<string, () => unknown>;
+  vertexArray?: VertexArrayLike;
+}
+
+export type CesiumRuntimeModule = typeof Cesium & {
+  Buffer: {
+    createVertexBuffer(options: {
+      context: ContextLike;
+      typedArray: Float32Array;
+      usage: unknown;
+    }): BufferLike;
+  };
+  BufferUsage: {
+    STATIC_DRAW: unknown;
+  };
+  DrawCommand: new (options?: Partial<DrawCommandLike>) => DrawCommandLike;
+  Pass: {
+    OPAQUE: unknown;
+  };
+  RenderState: {
+    fromCache(options: {
+      depthMask?: boolean;
+      depthTest?: {
+        enabled: boolean;
+      };
+    }): unknown;
+  };
+  Sampler: new (options: {
+    magnificationFilter: Cesium.TextureMagnificationFilter;
+    minificationFilter: Cesium.TextureMinificationFilter;
+  }) => unknown;
+  ShaderProgram: {
+    fromCache(options: {
+      attributeLocations: Record<string, number>;
+      context: ContextLike;
+      fragmentShaderSource: string;
+      vertexShaderSource: string;
+    }): ShaderProgramLike;
+  };
+  Texture: new (options: {
+    context: ContextLike;
+    flipY?: boolean;
+    height: number;
+    pixelDatatype: Cesium.PixelDatatype;
+    pixelFormat: Cesium.PixelFormat;
+    sampler: unknown;
+    source: {
+      arrayBufferView: Float32Array | Uint8Array;
+      height: number;
+      width: number;
+    };
+    width: number;
+  }) => TextureLike;
+  VertexArray: new (options: {
+    attributes: Array<{
+      componentDatatype: Cesium.ComponentDatatype;
+      componentsPerAttribute: number;
+      index: number;
+      vertexBuffer: BufferLike;
+    }>;
+    context: ContextLike;
+  }) => VertexArrayLike;
+};
+
 export interface PointLayerSpriteSource {
   url: string;
   width?: number;

@@ -1,22 +1,20 @@
 # cesium-gpu-points-layer
 
-High-performance Cesium point rendering for dense clouds of markers using GPU point sprites and packed float textures.
+High-performance Cesium marker rendering with rasterized image sprites (2D icons) packed into GPU float textures.
 
-This library is designed for telemetry-like workloads: thousands to millions of points with lightweight per-point metadata, optional rotation, and optional motion extrapolation.
+This library is designed for dense marker layers with frequent updates: roughly 50-100k points is a practical target (larger counts may work depending on the device), with optional per-point rotation and optional movement animation.
 
-It is a reusable extraction from a production Cesium demo and focuses on one goal:
+This was made to provide a lightweight overlay path for dense icon clouds that stays responsive when `Entity`/billboard APIs start to show overhead.
 
-**reduce per-frame CPU overhead and avoid expensive Cesium billboard entity overhead for large point sets.**
+## Why this was made
 
-## Why this exists
+`Cesium.BillboardCollection`/`Entity` workflows are convenient, but can become expensive when:
 
-`Cesium.BillboardCollection`/`Entity` workflows are convenient but become expensive when:
+- point counts are high (tens/hundreds of thousands),
+- data changes every frame or near-real-time,
+- marker payloads are mostly fixed metadata with position and direction, not full entity behavior.
 
-- point counts are very large (tens/hundreds of thousands),
-- points update frequently,
-- you need predictable per-frame GPU work instead of growing JS object churn.
-
-This library keeps data in texture memory and updates only GPU textures + uniforms, letting Cesium submit a single primitive for each layer.
+The renderer keeps per-marker payload in packed textures and submits one primitive per layer. In practice, the runtime tends to do less per-frame work because updates are focused on compact texture + uniform uploads.
 
 ## Package layout
 
@@ -35,6 +33,7 @@ This library keeps data in texture memory and updates only GPU textures + unifor
 
 1. **Prepare input records**
    - `BasePointRecord` is the required minimum input contract.
+   - All rendering inputs are ultimately packed as numeric channels; sprite visuals come from a rasterized image atlas (`SpriteTextureAtlas`).
    - `GpuPointLayer` converts each record into an internal prepared record with:
      - normalized world direction vector (`directionFromEarthCenter`)
      - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`)
@@ -64,9 +63,14 @@ This library keeps data in texture memory and updates only GPU textures + unifor
 
 5. **Runtime updates**
    - GPU upload includes:
-     - data texture update each frame only when visibility/records changed,
+     - data texture updates when visibility or records change,
      - sprite texture upload on sprite/source changes,
-     - draw command submit with uniforms for camera-scaled point size.
+     - draw command submission with uniforms for camera-scaled sprite size.
+
+6. **Sprite composition and output**
+   - Fragment shader samples the configured sprite atlas texture directly from a texture uniform.
+   - Optional motion path projects each marker forward from `speedMetersPerSecond`.
+   - Optional `rotationEnabled` rotates sprite samples in shader space so heading is visually respected.
 
 ## Installation
 
@@ -232,7 +236,7 @@ Single-point hemisphere predicate.
 
 This module is most beneficial for:
 
-- dense aircraft/ship/marker maps,
-- simulated telemetry overlays,
-- repeated per-frame updates where full entity objects are too heavy,
-- any scenario where you need stable frame-time with huge point sets.
+- movement-style overlays (aircraft, ships, vehicles, weather markers),
+- datasets with near-real-time position updates,
+- repeated updates where full entities are too heavy,
+- scenarios where a flat sprite texture atlas per layer is a good semantic fit.
