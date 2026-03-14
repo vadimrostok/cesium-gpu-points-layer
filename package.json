@@ -22,6 +22,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
+    "test": "npm run build && node --test ./tests/**/*.test.mjs",
+    "test:unit": "npm run build && node --test ./tests/unit/**/*.test.mjs",
+    "test:integration": "npm run build && node --test ./tests/integration/**/*.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "version": "node scripts/version.js"
   },

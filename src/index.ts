@@ -2,40 +2,52 @@ export {
   GpuPointLayer,
   CesiumPointTextureLayer,
   CesiumGpuPointLayer,
-  DEFAULT_POINT_ALTITUDE_METERS,
-  DEFAULT_POINT_CULL_DOT_THRESHOLD,
-  DEFAULT_POINT_HEADING_RADIANS,
   DEFAULT_MAX_EXTRAPOLATION_SECONDS,
   DEFAULT_MAX_POINT_SIZE,
   DEFAULT_MIN_POINT_SIZE,
+  DEFAULT_POINT_ALTITUDE_METERS,
+  DEFAULT_POINT_CULL_DOT_THRESHOLD,
+  DEFAULT_POINT_HEADING_RADIANS,
   DEFAULT_POINT_SCALE,
+} from './gpu-point-layer.js';
+
+export {
   buildPointFragmentShaderWebGL1,
   buildPointFragmentShaderWebGL2,
   buildPointShaders,
   buildPointVertexShaderWebGL1,
   buildPointVertexShaderWebGL2,
+} from './shaders/point-shaders.js';
+
+export {
   computePointTextureLayout,
   filterPointsForVisibleHemisphere,
   isPointInVisibleHemisphere,
+  normalizeTextureName,
+  resolveShaderConfig,
   packPointsIntoFloatTexture,
-  type BasePointRecord,
-  type CesiumGpuPointLayerFrameState,
-  type CesiumGpuPointLayerOptions,
-  type CesiumGpuPointLayerDescriptor,
-  type CesiumGpuPointLayerShaders,
-  type CesiumGpuPointLayerShaderBuildInput,
-  type CesiumGpuPointLayerUniformInputs,
-  type CesiumGpuPointLayerUniforms,
-  type GpuPointLayerShaderConfig,
-  type PackedPointTexture,
-  type PointLayerSpriteSource,
-  type PointTextureLayout,
-  type PreparedPointRecord,
-  type SpriteTextureAtlas,
-} from './gpu-point-layer.js';
+} from './cpu-pipeline/point-pipeline.js';
 
 export type {
-  GpuPointLayerShaderConfig as CesiumGpuPointLayerShaderConfig,
-} from './gpu-point-layer.js';
+  BasePointRecord,
+  CesiumGpuPointLayerDescriptor,
+  CesiumGpuPointLayerFrameState,
+  CesiumGpuPointLayerOptions,
+  CesiumGpuPointLayerShaderBuildInput,
+  CesiumGpuPointLayerShaderConfig,
+  CesiumGpuPointLayerShaders,
+  CesiumGpuPointLayerUniformInputs,
+  CesiumGpuPointLayerUniforms,
+  GpuPointLayerDescriptor,
+  GpuPointLayerOptions,
+  GpuPointLayerShaderConfig,
+  PackedPointTexture,
+  PointLayerSpriteSource,
+  PointTextureLayout,
+  PreparedPointRecord,
+  SpriteTextureAtlas,
+} from './types.js';
 
-export { clearSpriteRasterizationCache, rasterizeSvgToTexture, type SvgSpriteRasterizeOptions, type SvgSpriteRasterized } from './sprite-texture.js';
+export { type CesiumRuntimeModule } from './gpu-point-layer.js';
+
+export { clearSpriteRasterizationCache, rasterizeSvgToTexture, type SvgSpriteRasterized, type SvgSpriteRasterizeOptions } from './sprite-texture.js';
