@@ -6,6 +6,8 @@ This library is designed for dense marker layers with frequent updates: roughly 
 
 This was made to provide a lightweight overlay path for dense icon clouds that stays responsive when `Entity`/billboard APIs start to show overhead.
 
+[https://vadimrostok.github.io/cesium-gpu-points-layer-demo/](https://vadimrostok.github.io/cesium-gpu-points-layer-demo/)
+
 ![example](https://github.com/user-attachments/assets/d7528977-1602-4528-a1d4-d86778de7e20)
 
 ## Why this was made
