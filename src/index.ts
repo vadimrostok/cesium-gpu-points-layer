@@ -1,0 +1,41 @@
+export {
+  GpuPointLayer,
+  CesiumPointTextureLayer,
+  CesiumGpuPointLayer,
+  DEFAULT_POINT_ALTITUDE_METERS,
+  DEFAULT_POINT_CULL_DOT_THRESHOLD,
+  DEFAULT_POINT_HEADING_RADIANS,
+  DEFAULT_MAX_EXTRAPOLATION_SECONDS,
+  DEFAULT_MAX_POINT_SIZE,
+  DEFAULT_MIN_POINT_SIZE,
+  DEFAULT_POINT_SCALE,
+  buildPointFragmentShaderWebGL1,
+  buildPointFragmentShaderWebGL2,
+  buildPointShaders,
+  buildPointVertexShaderWebGL1,
+  buildPointVertexShaderWebGL2,
+  computePointTextureLayout,
+  filterPointsForVisibleHemisphere,
+  isPointInVisibleHemisphere,
+  packPointsIntoFloatTexture,
+  type BasePointRecord,
+  type CesiumGpuPointLayerFrameState,
+  type CesiumGpuPointLayerOptions,
+  type CesiumGpuPointLayerDescriptor,
+  type CesiumGpuPointLayerShaders,
+  type CesiumGpuPointLayerShaderBuildInput,
+  type CesiumGpuPointLayerUniformInputs,
+  type CesiumGpuPointLayerUniforms,
+  type GpuPointLayerShaderConfig,
+  type PackedPointTexture,
+  type PointLayerSpriteSource,
+  type PointTextureLayout,
+  type PreparedPointRecord,
+  type SpriteTextureAtlas,
+} from './gpu-point-layer.js';
+
+export type {
+  GpuPointLayerShaderConfig as CesiumGpuPointLayerShaderConfig,
+} from './gpu-point-layer.js';
+
+export { clearSpriteRasterizationCache, rasterizeSvgToTexture, type SvgSpriteRasterizeOptions, type SvgSpriteRasterized } from './sprite-texture.js';

@@ -1,0 +1,37 @@
+{
+  "name": "cesium-gpu-points-layer",
+  "version": "0.1.0",
+  "description": "High-performance Cesium GPU point rendering layer using packed textures and custom point sprites.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "smoke": "node scripts/smoke.mjs",
+    "version": "node scripts/version.js"
+  },
+  "peerDependencies": {
+    "cesium": "^1.139.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.1",
+    "cesium": "^1.139.0",
+    "typescript": "^5.9.2",
+    "rimraf": "^6.0.1"
+  }
+}
