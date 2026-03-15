@@ -107,19 +107,16 @@ out float v_headingRadians;
 vec3 cartographicDegreesToCartesian(vec3 pointCartographic) {
     vec2 lonLatRadians = radians(pointCartographic.xy);
     float cosLatitude = cos(lonLatRadians.y);
-    vec3 direction = vec3(
+    vec3 geodeticNormal = normalize(vec3(
         cosLatitude * cos(lonLatRadians.x),
         cosLatitude * sin(lonLatRadians.x),
         sin(lonLatRadians.y)
-    );
+    ));
 
     vec3 radiiSquared = czm_ellipsoidRadii * czm_ellipsoidRadii;
-    vec3 oneOverRadiiSquared = 1.0 / radiiSquared;
-    vec3 surfaceSample = direction * czm_ellipsoidRadii;
-    vec3 normal = czm_geodeticSurfaceNormal(surfaceSample, vec3(0.0), oneOverRadiiSquared);
-    vec3 k = radiiSquared * normal / sqrt(dot(radiiSquared * normal, normal));
+    vec3 k = radiiSquared * geodeticNormal / sqrt(dot(radiiSquared * geodeticNormal, geodeticNormal));
 
-    return k + normal * pointCartographic.z;
+    return k + geodeticNormal * pointCartographic.z;
 }
 
 ${extrapolateFunction}
@@ -209,19 +206,16 @@ ${coordinates}
 vec3 cartographicDegreesToCartesian(vec3 pointCartographic) {
     vec2 lonLatRadians = radians(pointCartographic.xy);
     float cosLatitude = cos(lonLatRadians.y);
-    vec3 direction = vec3(
+    vec3 geodeticNormal = normalize(vec3(
         cosLatitude * cos(lonLatRadians.x),
         cosLatitude * sin(lonLatRadians.x),
         sin(lonLatRadians.y)
-    );
+    ));
 
     vec3 radiiSquared = czm_ellipsoidRadii * czm_ellipsoidRadii;
-    vec3 oneOverRadiiSquared = 1.0 / radiiSquared;
-    vec3 surfaceSample = direction * czm_ellipsoidRadii;
-    vec3 normal = czm_geodeticSurfaceNormal(surfaceSample, vec3(0.0), oneOverRadiiSquared);
-    vec3 k = radiiSquared * normal / sqrt(dot(radiiSquared * normal, normal));
+    vec3 k = radiiSquared * geodeticNormal / sqrt(dot(radiiSquared * geodeticNormal, geodeticNormal));
 
-    return k + normal * pointCartographic.z;
+    return k + geodeticNormal * pointCartographic.z;
 }
 
 ${extrapolateFunction}
