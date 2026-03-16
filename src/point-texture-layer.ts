@@ -67,6 +67,7 @@ export class CesiumPointTextureLayer<
   private readonly drawCommand: DrawCommandLike;
   private readonly sampler: unknown;
   private readonly renderState: unknown;
+  private readonly depthTestEnabled: boolean;
   private readonly indexAttributeName: string;
   private readonly indexAttributeLocation: number;
   private readonly shaderSources: CesiumGpuPointLayerShaders;
@@ -118,6 +119,7 @@ export class CesiumPointTextureLayer<
     this.cullDotThreshold = descriptor.cullDotThreshold ?? DEFAULT_POINT_CULL_DOT_THRESHOLD;
     this.hasMotionTexture = descriptor.packMotionData !== undefined;
     this.rotationEnabled = descriptor.options?.rotationEnabled ?? DEFAULT_ROTATION_ENABLED;
+    this.depthTestEnabled = descriptor.options?.depthTest ?? true;
     this.getNowSeconds = descriptor.getNowSeconds ?? (() => 0);
     this.indexAttributeName = descriptor.indexAttributeName;
     this.indexAttributeLocation = descriptor.indexAttributeLocation;
@@ -129,9 +131,9 @@ export class CesiumPointTextureLayer<
     });
     this.renderState = CesiumRuntime.RenderState.fromCache({
       depthTest: {
-        enabled: descriptor.options?.depthTest ?? false,
+        enabled: descriptor.options?.depthTest ?? true,
       },
-      depthMask: descriptor.options?.depthMask ?? false,
+      depthMask: descriptor.options?.depthMask ?? true,
     });
     this.drawCommand = new CesiumRuntime.DrawCommand({
       owner: this,
@@ -229,20 +231,22 @@ export class CesiumPointTextureLayer<
     this.currentNowSeconds = this.getNowSeconds(frameState);
     this.ensureResources(frameState.context);
 
-    const cameraDirection = Cesium.Cartesian3.normalize(
-      frameState.camera.positionWC,
-      scratchCameraDirection,
-    );
-
-    if (
+    const cameraDirection = this.depthTestEnabled
+      ? null
+      : Cesium.Cartesian3.normalize(frameState.camera.positionWC, scratchCameraDirection);
+    const shouldRebuildPoints =
       this.pointsDirty ||
       this.visibilityDirty ||
-      hasCameraDirectionChanged(cameraDirection, this.lastCameraDirection)
-    ) {
+      (!this.depthTestEnabled &&
+        hasCameraDirectionChanged(cameraDirection, this.lastCameraDirection));
+
+    if (shouldRebuildPoints) {
       this.rebuildVisiblePoints(cameraDirection);
       this.uploadMainTextures(frameState.context);
       this.uploadSpriteTexture(frameState.context);
-      Cesium.Cartesian3.clone(cameraDirection, this.lastCameraDirection);
+      if (!this.depthTestEnabled && cameraDirection) {
+        Cesium.Cartesian3.clone(cameraDirection, this.lastCameraDirection);
+      }
       this.pointsDirty = false;
       this.visibilityDirty = false;
     }
@@ -504,7 +508,7 @@ export class CesiumPointTextureLayer<
     this.spriteTextureDirty = this.spriteTextureData !== null;
   }
 
-  private rebuildVisiblePoints(cameraDirection: Cesium.Cartesian3): void {
+  private rebuildVisiblePoints(cameraDirection: Cesium.Cartesian3 | null): void {
     let packedPointIndex = 0;
 
     for (const point of this.allPoints) {
@@ -513,8 +517,9 @@ export class CesiumPointTextureLayer<
       }
 
       if (
+        cameraDirection !== null &&
         Cesium.Cartesian3.dot(cameraDirection, point.directionFromEarthCenter) <=
-        this.cullDotThreshold
+          this.cullDotThreshold
       ) {
         continue;
       }
@@ -571,15 +576,17 @@ export class CesiumPointTextureLayer<
 }
 
 const hasCameraDirectionChanged = (
-  nextDirection: Cesium.Cartesian3,
+  nextDirection: Cesium.Cartesian3 | null,
   previousDirection: Cesium.Cartesian3,
 ): boolean =>
-  !Cesium.Cartesian3.equalsEpsilon(
-    nextDirection,
-    previousDirection,
-    CAMERA_DIRECTION_EPSILON,
-    CAMERA_DIRECTION_EPSILON,
-  );
+  nextDirection === null
+    ? false
+    : !Cesium.Cartesian3.equalsEpsilon(
+      nextDirection,
+      previousDirection,
+      CAMERA_DIRECTION_EPSILON,
+      CAMERA_DIRECTION_EPSILON,
+    );
 
 /**
  * Backward-compatible export name kept from earlier internal API.

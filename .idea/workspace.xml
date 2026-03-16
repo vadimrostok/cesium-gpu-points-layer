@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="fcdd408f-2f93-405f-a6a4-d34410e3e332" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/demo/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/public/be-globe-layer-points.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/public/svgs/earthquake.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/public/svgs/medium-plane-2.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/public/svgs/ship.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/src/billboard-renderer.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/src/globe-data.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/src/main.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/src/stats-js.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/src/styles.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/tsconfig.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demo/vite.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gpu-point-layer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/gpu-point-layer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/point-texture-layer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/point-texture-layer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/gpu-point-layer.test.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/gpu-point-layer.test.mjs" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3B1leptC4zStDxJI0kqGJeRfZ2t" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "javascript.preferred.runtime.type.id": "node",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
+    "ts.external.directory.path": "/Users/vadymrostok/code/apps/cesium-gpu-points-layer/node_modules/typescript/lib",
+    "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "TEXT"
+    ]
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="fcdd408f-2f93-405f-a6a4-d34410e3e332" name="Changes" comment="" />
+      <created>1773664555432</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1773664555432</updated>
+      <workItem from="1773664556986" duration="89000" />
+      <workItem from="1773664647616" duration="202000" />
+      <workItem from="1773664855924" duration="237000" />
+      <workItem from="1773665099566" duration="2736000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

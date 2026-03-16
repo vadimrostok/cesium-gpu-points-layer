@@ -102,3 +102,113 @@ test('draw order and motion/rotation config propagate to internal layer', () => 
     Cesium.RenderState.fromCache = originalRenderStateFromCache;
   }
 });
+
+test('depthTest option propagates to render state', () => {
+  const originalRenderStateFromCache = Cesium.RenderState.fromCache;
+  const renderStateArgs = [];
+  Cesium.RenderState.fromCache = (params) => {
+    renderStateArgs.push(params);
+    return {};
+  };
+
+  try {
+    const defaultLayer = new GpuPointLayer([{ id: 'p1', longitude: 0, latitude: 0 }], {
+      name: 'depth-default',
+      textureName: 'plane',
+      sprite,
+    });
+    const depthEnabledLayer = new GpuPointLayer(
+      [{ id: 'p2', longitude: 1, latitude: 1 }],
+      {
+        name: 'depth-enabled',
+        textureName: 'ship',
+        sprite,
+        depthTest: false,
+      },
+    );
+
+    assert.equal(renderStateArgs[0].depthTest.enabled, true);
+    assert.equal(renderStateArgs[1].depthTest.enabled, false);
+
+    defaultLayer.destroy();
+    depthEnabledLayer.destroy();
+  } finally {
+    Cesium.RenderState.fromCache = originalRenderStateFromCache;
+  }
+});
+
+test('depthTest=true skips camera-direction-only rebuild work', () => {
+  const originalRenderStateFromCache = Cesium.RenderState.fromCache;
+  Cesium.RenderState.fromCache = () => ({});
+  let layer;
+  let pointLayer;
+  try {
+    layer = new GpuPointLayer(
+      [
+        { id: 'p1', longitude: 0, latitude: 0 },
+        { id: 'p2', longitude: 1, latitude: 1 },
+      ],
+      {
+        name: 'depth-camera-filter',
+        textureName: 'plane',
+        sprite,
+        depthTest: true,
+      },
+    );
+    const internal = /** @type {{ pointLayer: any }} */ (layer);
+    pointLayer = internal.pointLayer;
+
+    const originalRebuildVisiblePoints = pointLayer.rebuildVisiblePoints.bind(pointLayer);
+    let rebuildCalls = 0;
+    pointLayer.rebuildVisiblePoints = (cameraDirection) => {
+      rebuildCalls += 1;
+      originalRebuildVisiblePoints(cameraDirection);
+    };
+
+    const originalUploadMainTextures = pointLayer.uploadMainTextures.bind(pointLayer);
+    const originalUploadSpriteTexture = pointLayer.uploadSpriteTexture.bind(pointLayer);
+    const originalEnsureResources = pointLayer.ensureResources.bind(pointLayer);
+    pointLayer.uploadMainTextures = () => {
+      return;
+    };
+    pointLayer.uploadSpriteTexture = () => {
+      return;
+    };
+    pointLayer.ensureResources = () => {
+      return;
+    };
+
+    const frameStateA = {
+      passes: { render: true },
+      mode: Cesium.SceneMode.SCENE3D,
+      camera: { positionWC: new Cesium.Cartesian3(7_000_000, 0, 0) },
+      context: {},
+      commandList: [],
+    };
+
+    const frameStateB = {
+      passes: { render: true },
+      mode: Cesium.SceneMode.SCENE3D,
+      camera: { positionWC: new Cesium.Cartesian3(0, 0, 7_000_000) },
+      context: {},
+      commandList: [],
+    };
+
+    pointLayer.update(frameStateA);
+    assert.equal(rebuildCalls, 1);
+
+    pointLayer.visibleCount = 0;
+    pointLayer.update(frameStateB);
+    assert.equal(rebuildCalls, 1);
+
+    pointLayer.rebuildVisiblePoints = originalRebuildVisiblePoints;
+    pointLayer.uploadMainTextures = originalUploadMainTextures;
+    pointLayer.uploadSpriteTexture = originalUploadSpriteTexture;
+    pointLayer.ensureResources = originalEnsureResources;
+  } finally {
+    Cesium.RenderState.fromCache = originalRenderStateFromCache;
+    if (layer && pointLayer) {
+      layer.destroy();
+    }
+  }
+});

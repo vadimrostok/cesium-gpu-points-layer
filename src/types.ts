@@ -247,6 +247,8 @@ export interface GpuPointLayerOptions {
   enableAnimation?: boolean;
   defaultAltitudeMeters?: number;
   defaultHeadingRadians?: number;
+  depthTest?: boolean;
+  depthMask?: boolean;
   shaderConfig?: Partial<GpuPointLayerShaderConfig>;
   /**
    * Lower values are rendered first, higher values are rendered later.

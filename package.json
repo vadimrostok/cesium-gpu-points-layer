@@ -20,6 +20,10 @@
     "package.json"
   ],
   "scripts": {
+    "demo": "npm run demo:dev",
+    "demo:dev": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts",
+    "demo:preview": "vite preview --config demo/vite.config.ts --host 0.0.0.0 --port 4173",
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "test": "npm run build && node --test ./tests/**/*.test.mjs",
@@ -34,8 +38,11 @@
   "devDependencies": {
     "@types/node": "^24.0.1",
     "cesium": "^1.139.0",
+    "rimraf": "^6.0.1",
+    "stats.js": "^0.17.0",
     "typescript": "^5.9.2",
-    "rimraf": "^6.0.1"
+    "vite": "^7.3.1",
+    "vite-plugin-static-copy": "^3.3.0"
   },
   "repository": {
     "type": "git",
