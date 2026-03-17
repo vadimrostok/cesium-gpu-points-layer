@@ -5,35 +5,30 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="fcdd408f-2f93-405f-a6a4-d34410e3e332" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/demo/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/public/be-globe-layer-points.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/public/svgs/earthquake.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/public/svgs/medium-plane-2.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/public/svgs/ship.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/src/billboard-renderer.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/src/globe-data.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/src/main.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/src/stats-js.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/src/styles.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/tsconfig.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demo/vite.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/gpu-point-layer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/gpu-point-layer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/point-texture-layer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/point-texture-layer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shaders/point-shaders.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shaders/point-shaders.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/gpu-point-layer.test.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/gpu-point-layer.test.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/unit/point-shaders.test.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit/point-shaders.test.mjs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="36" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="LLMProjectSettings">
+    <option name="turned_on" value="false" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
@@ -47,18 +42,22 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
     "javascript.preferred.runtime.type.id": "node",
+    "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "editor.preferences.fonts.default",
+    "to.speed.mode.migration.done": "true",
     "ts.external.directory.path": "/Users/vadymrostok/code/apps/cesium-gpu-points-layer/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   },
@@ -78,7 +77,8 @@
       <workItem from="1773664556986" duration="89000" />
       <workItem from="1773664647616" duration="202000" />
       <workItem from="1773664855924" duration="237000" />
-      <workItem from="1773665099566" duration="2736000" />
+      <workItem from="1773665099566" duration="3769000" />
+      <workItem from="1773752872738" duration="2728000" />
     </task>
     <servers />
   </component>

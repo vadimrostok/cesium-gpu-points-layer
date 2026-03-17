@@ -250,6 +250,7 @@ export interface GpuPointLayerOptions {
   depthTest?: boolean;
   depthMask?: boolean;
   shaderConfig?: Partial<GpuPointLayerShaderConfig>;
+  shaders?: CesiumGpuPointLayerShaders;
   /**
    * Lower values are rendered first, higher values are rendered later.
    */

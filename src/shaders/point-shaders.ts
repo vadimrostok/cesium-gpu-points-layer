@@ -66,6 +66,9 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
     if (motionData.x <= 0.0 || motionData.w <= 0.0) {
         return pointData.rgb;
     }
+    if (motionData.y == 0.0 && motionData.z == 0.0) {
+        return pointData.rgb;
+    }
 
     float elapsedSeconds = clamp(
         ${nowSecondsUniform} - motionData.w,
@@ -73,16 +76,36 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
         ${maxExtrapolationSecondsUniform}
     );
     float traveledDistanceMeters = motionData.x * elapsedSeconds;
-    float northMeters = motionData.z * traveledDistanceMeters;
-    float eastMeters = motionData.y * traveledDistanceMeters;
-    float deltaLatitudeDegrees = degrees(northMeters / 6378137.0);
+    float angularDistance = traveledDistanceMeters / 6378137.0;
+
     float latitudeRadians = radians(pointData.y);
-    float longitudeScale = max(cos(latitudeRadians), 1e-6);
-    float deltaLongitudeDegrees = degrees(eastMeters / (6378137.0 * longitudeScale));
+    float longitudeRadians = radians(pointData.x);
+    float angularDistanceSin = sin(angularDistance);
+    float angularDistanceCos = cos(angularDistance);
+
+    float cosLatitude = cos(latitudeRadians);
+    vec3 baseNormal = vec3(
+        cosLatitude * cos(longitudeRadians),
+        cosLatitude * sin(longitudeRadians),
+        sin(latitudeRadians)
+    );
+    vec3 eastUnit = normalize(vec3(
+        -sin(longitudeRadians),
+        cos(longitudeRadians),
+        0.0
+    ));
+    vec3 northUnit = normalize(vec3(
+        -sin(latitudeRadians) * cos(longitudeRadians),
+        -sin(latitudeRadians) * sin(longitudeRadians),
+        cosLatitude
+    ));
+    // directionX is north component; directionY is east component in local tangent space.
+    vec3 direction = normalize(northUnit * motionData.z + eastUnit * motionData.y);
+    vec3 nextNormal = baseNormal * angularDistanceCos + direction * angularDistanceSin;
 
     return vec3(
-        mod(pointData.x + 540.0, 360.0) - 180.0 + deltaLongitudeDegrees,
-        clamp(pointData.y + deltaLatitudeDegrees, -90.0, 90.0),
+        mod(degrees(atan(nextNormal.y, nextNormal.x)) + 180.0, 360.0) - 180.0,
+        degrees(asin(clamp(nextNormal.z, -1.0, 1.0))),
         pointData.z
     );
 }
@@ -165,6 +188,9 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
     if (motionData.x <= 0.0 || motionData.w <= 0.0) {
         return pointData.rgb;
     }
+    if (motionData.y == 0.0 && motionData.z == 0.0) {
+        return pointData.rgb;
+    }
 
     float elapsedSeconds = clamp(
         ${nowSecondsUniform} - motionData.w,
@@ -172,16 +198,36 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
         ${maxExtrapolationSecondsUniform}
     );
     float traveledDistanceMeters = motionData.x * elapsedSeconds;
-    float northMeters = motionData.z * traveledDistanceMeters;
-    float eastMeters = motionData.y * traveledDistanceMeters;
-    float deltaLatitudeDegrees = degrees(northMeters / 6378137.0);
+    float angularDistance = traveledDistanceMeters / 6378137.0;
+
     float latitudeRadians = radians(pointData.y);
-    float longitudeScale = max(cos(latitudeRadians), 1e-6);
-    float deltaLongitudeDegrees = degrees(eastMeters / (6378137.0 * longitudeScale));
+    float longitudeRadians = radians(pointData.x);
+    float angularDistanceSin = sin(angularDistance);
+    float angularDistanceCos = cos(angularDistance);
+
+    float cosLatitude = cos(latitudeRadians);
+    vec3 baseNormal = vec3(
+        cosLatitude * cos(longitudeRadians),
+        cosLatitude * sin(longitudeRadians),
+        sin(latitudeRadians)
+    );
+    vec3 eastUnit = normalize(vec3(
+        -sin(longitudeRadians),
+        cos(longitudeRadians),
+        0.0
+    ));
+    vec3 northUnit = normalize(vec3(
+        -sin(latitudeRadians) * cos(longitudeRadians),
+        -sin(latitudeRadians) * sin(longitudeRadians),
+        cosLatitude
+    ));
+    // directionX is north component; directionY is east component in local tangent space.
+    vec3 direction = normalize(northUnit * motionData.y + eastUnit * motionData.z);
+    vec3 nextNormal = baseNormal * angularDistanceCos + direction * angularDistanceSin;
 
     return vec3(
-        mod(pointData.x + 540.0, 360.0) - 180.0 + deltaLongitudeDegrees,
-        clamp(pointData.y + deltaLatitudeDegrees, -90.0, 90.0),
+        mod(degrees(atan(nextNormal.y, nextNormal.x)) + 180.0, 360.0) - 180.0,
+        degrees(asin(clamp(nextNormal.z, -1.0, 1.0))),
         pointData.z
     );
 }

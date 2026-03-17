@@ -260,6 +260,7 @@ export class GpuPointLayer<TPoint extends BasePointRecord> {
           options.shaderConfig?.rotationEnabledUniform ??
           DEFAULT_POINT_SHADER_CONFIG.rotationEnabledUniform,
       },
+      shaders: options.shaders ?? undefined,
     };
   }
 }
