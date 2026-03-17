@@ -6,10 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="fcdd408f-2f93-405f-a6a4-d34410e3e332" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gpu-point-layer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/gpu-point-layer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shaders/point-shaders.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shaders/point-shaders.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit/point-shaders.test.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit/point-shaders.test.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,7 +75,7 @@
       <workItem from="1773664647616" duration="202000" />
       <workItem from="1773664855924" duration="237000" />
       <workItem from="1773665099566" duration="3769000" />
-      <workItem from="1773752872738" duration="2728000" />
+      <workItem from="1773752872738" duration="3886000" />
     </task>
     <servers />
   </component>
