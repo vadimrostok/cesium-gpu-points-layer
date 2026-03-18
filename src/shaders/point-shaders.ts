@@ -35,6 +35,7 @@ export const buildPointVertexShaderWebGL2 = (
 ): string => {
   const headingOffset = shaderFloatLiteral(config.headingOffsetRadians ?? 0);
   const hasMotion = config.hasMotionExtrapolation ?? false;
+  const alignWithGround = config.alignWithGround ?? false;
   const motionTextureUniform = config.motionTextureUniform ?? 'u_motionTexture';
   const nowSecondsUniform = config.nowSecondsUniform ?? 'u_nowSeconds';
   const maxExtrapolationSecondsUniform =
@@ -59,6 +60,39 @@ uniform float ${maxExtrapolationSecondsUniform};
   const extrapolateCall = hasMotion
     ? `cartographicDegreesToCartesian(extrapolatePointCartographic(pointData, motionData))`
     : 'cartographicDegreesToCartesian(pointData.rgb)';
+  const groundAlignmentVarying = alignWithGround ? 'out float v_groundAlignment;' : '';
+  const groundAxisVarying = alignWithGround ? 'out vec2 v_groundAxis;' : '';
+  const groundAlignmentComputation = alignWithGround
+    ? `
+    vec3 viewDirectionEC = normalize(-positionEC.xyz);
+    vec3 pointNormalEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
+    // This is the amount the image would be compressed due to viewing angle
+    v_groundAlignment = clamp(abs(dot(pointNormalEC, viewDirectionEC)), 0.0, 1.0);
+    // Compress along the tangent-plane direction that points toward the camera.
+    // The perpendicular in-plane direction stays visible as the "thin line" near the limb.
+    vec3 flattenAxisEC = viewDirectionEC - pointNormalEC * dot(pointNormalEC, viewDirectionEC);
+    float flattenAxisLength = length(flattenAxisEC);
+    if (flattenAxisLength > 0.0001) {
+        flattenAxisEC /= flattenAxisLength;
+    } else {
+        flattenAxisEC = vec3(1.0, 0.0, 0.0);
+    }
+    vec4 shiftedPositionEC = vec4(
+        positionEC.xyz + flattenAxisEC * max(1000.0, length(positionEC.xyz) * 0.01),
+        1.0
+    );
+    vec4 shiftedClip = czm_projection * shiftedPositionEC;
+    vec2 projectedFlattenAxis = (shiftedClip.xy / shiftedClip.w) - (gl_Position.xy / gl_Position.w);
+    float projectedFlattenAxisLength = length(projectedFlattenAxis);
+    if (projectedFlattenAxisLength > 0.0001) {
+        v_groundAxis = projectedFlattenAxisLength / projectedFlattenAxis; // vec2(0.5, 0.5); // projectedFlattenAxis / projectedFlattenAxisLength;
+        // Rotate counterclockwise
+        v_groundAxis = vec2(-v_groundAxis.y, v_groundAxis.x);
+    } else {
+        v_groundAxis = vec2(0.0, 0.0);
+    }
+`
+    : '';
 
   const extrapolateFunction = hasMotion
     ? `
@@ -100,7 +134,7 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
         cosLatitude
     ));
     // directionX is north component; directionY is east component in local tangent space.
-    vec3 direction = normalize(northUnit * motionData.z + eastUnit * motionData.y);
+    vec3 direction = normalize(northUnit * motionData.y + eastUnit * motionData.z);
     vec3 nextNormal = baseNormal * angularDistanceCos + direction * angularDistanceSin;
 
     return vec3(
@@ -126,6 +160,8 @@ uniform float u_pointScale;
 ${motionUniforms}
 
 out float v_headingRadians;
+${groundAlignmentVarying}
+${groundAxisVarying}
 
 vec3 cartographicDegreesToCartesian(vec3 pointCartographic) {
     vec2 lonLatRadians = radians(pointCartographic.xy);
@@ -156,6 +192,7 @@ void main() {
     float cameraDistance = max(1.0, length(positionEC.xyz));
     gl_PointSize = clamp(u_pointScale / cameraDistance, u_minPointSize, u_maxPointSize);
     v_headingRadians = pointData.a + (${headingOffset});
+    ${groundAlignmentComputation}
 }`;
 };
 
@@ -164,6 +201,7 @@ export const buildPointVertexShaderWebGL1 = (
 ): string => {
   const headingOffset = shaderFloatLiteral(config.headingOffsetRadians ?? 0);
   const hasMotion = config.hasMotionExtrapolation ?? false;
+  const alignWithGround = config.alignWithGround ?? false;
   const motionTextureUniform = config.motionTextureUniform ?? 'u_motionTexture';
   const nowSecondsUniform = config.nowSecondsUniform ?? 'u_nowSeconds';
   const maxExtrapolationSecondsUniform =
@@ -182,6 +220,38 @@ uniform float ${maxExtrapolationSecondsUniform};
   const extrapolateCall = hasMotion
     ? 'cartographicDegreesToCartesian(extrapolatePointCartographic(pointData, motionData))'
     : 'cartographicDegreesToCartesian(pointData.rgb)';
+  const groundAlignmentVarying = alignWithGround ? 'varying float v_groundAlignment;' : '';
+  const groundAxisVarying = alignWithGround ? 'varying vec2 v_groundAxis;' : '';
+  const groundAlignmentComputation = alignWithGround
+    ? `
+    vec3 viewDirectionEC = normalize(-positionEC.xyz);
+    vec3 pointNormalEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
+    v_groundAlignment = clamp(abs(dot(pointNormalEC, viewDirectionEC)), 0.0, 1.0);
+    // Compress along the tangent-plane direction that points toward the camera.
+    // The perpendicular in-plane direction stays visible as the "thin line" near the limb.
+    vec3 flattenAxisEC = viewDirectionEC - pointNormalEC * dot(pointNormalEC, viewDirectionEC);
+    float flattenAxisLength = length(flattenAxisEC);
+    if (flattenAxisLength > 0.0001) {
+        flattenAxisEC /= flattenAxisLength;
+    } else {
+        flattenAxisEC = vec3(1.0, 0.0, 0.0);
+    }
+    vec4 shiftedPositionEC = vec4(
+        positionEC.xyz + flattenAxisEC * max(1000.0, length(positionEC.xyz) * 0.01),
+        1.0
+    );
+    vec4 shiftedClip = czm_projection * shiftedPositionEC;
+    vec2 projectedFlattenAxis = (shiftedClip.xy / shiftedClip.w) - (gl_Position.xy / gl_Position.w);
+    float projectedFlattenAxisLength = length(projectedFlattenAxis);
+    if (projectedFlattenAxisLength > 0.0001) {
+        v_groundAxis = projectedFlattenAxisLength / projectedFlattenAxis;
+        // Rotate counterclockwise
+        v_groundAxis = vec2(-v_groundAxis.y, v_groundAxis.x);
+    } else {
+        v_groundAxis = vec2(0.0, 0.0);
+    }
+`
+    : '';
   const extrapolateFunction = hasMotion
     ? `
 vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
@@ -246,6 +316,8 @@ uniform float u_minPointSize;
 uniform float u_pointScale;
 
 varying float v_headingRadians;
+${groundAlignmentVarying}
+${groundAxisVarying}
 
 ${coordinates}
 
@@ -277,17 +349,21 @@ void main() {
     float cameraDistance = max(1.0, length(positionEC.xyz));
     gl_PointSize = clamp(u_pointScale / cameraDistance, u_minPointSize, u_maxPointSize);
     v_headingRadians = pointData.a + (${headingOffset});
+    ${groundAlignmentComputation}
 }`;
 };
 
 export const buildPointFragmentShaderWebGL2 = (
   spriteTextureUniform = 'u_spriteTexture',
+  alignWithGround = false,
 ): string => `precision highp float;
 
 uniform sampler2D ${spriteTextureUniform};
 uniform float u_rotationEnabled;
 
 in float v_headingRadians;
+${alignWithGround ? 'in float v_groundAlignment;' : ''}
+${alignWithGround ? 'in vec2 v_groundAxis;' : ''}
 
 void main() {
     vec2 centered = gl_PointCoord - vec2(0.5);
@@ -296,7 +372,26 @@ void main() {
     sine = mix(0.0, sine, u_rotationEnabled);
     cosine = mix(1.0, cosine, u_rotationEnabled);
     mat2 inverseRotation = mat2(cosine, sine, -sine, cosine);
+${alignWithGround
+      ? `
+    if (v_groundAxis.x == 0.0 && v_groundAxis.y == 0.0) {
+      discard;
+    }
+    float groundAlignment = max(v_groundAlignment, 0.001);
+    vec2 groundAxis = normalize(v_groundAxis);
+    vec2 groundAxisPerpendicular = vec2(-groundAxis.y, groundAxis.x);
+    float compressedAxisCoordinate = dot(centered, groundAxis);
+    float perpendicularCoordinate = dot(centered, groundAxisPerpendicular);
+    if (abs(compressedAxisCoordinate) > 0.5 * groundAlignment) {
+        discard;
+    }
+    float expandedAxisCoordinate = compressedAxisCoordinate / groundAlignment;
+    vec2 uncompressed = groundAxis * expandedAxisCoordinate + groundAxisPerpendicular * perpendicularCoordinate;
+    vec2 uv = inverseRotation * uncompressed + vec2(0.5);
+`
+      : `
     vec2 uv = inverseRotation * centered + vec2(0.5);
+`}
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         discard;
@@ -312,12 +407,15 @@ void main() {
 
 export const buildPointFragmentShaderWebGL1 = (
   spriteTextureUniform = 'u_spriteTexture',
+  alignWithGround = false,
 ): string => `precision highp float;
 
 uniform sampler2D ${spriteTextureUniform};
 uniform float u_rotationEnabled;
 
 varying float v_headingRadians;
+${alignWithGround ? 'varying float v_groundAlignment;' : ''}
+${alignWithGround ? 'varying vec2 v_groundAxis;' : ''}
 
 void main() {
     vec2 centered = gl_PointCoord - vec2(0.5);
@@ -326,7 +424,26 @@ void main() {
     sine = mix(0.0, sine, u_rotationEnabled);
     cosine = mix(1.0, cosine, u_rotationEnabled);
     mat2 inverseRotation = mat2(cosine, sine, -sine, cosine);
+${alignWithGround
+      ? `
+    if (v_groundAxis.x == 0.0 && v_groundAxis.y == 0.0) {
+      discard;
+    }
+    float groundAlignment = max(v_groundAlignment, 0.001);
+    vec2 groundAxis = normalize(v_groundAxis);
+    vec2 groundAxisPerpendicular = vec2(-groundAxis.y, groundAxis.x);
+    float compressedAxisCoordinate = dot(centered, groundAxis);
+    float perpendicularCoordinate = dot(centered, groundAxisPerpendicular);
+    if (abs(compressedAxisCoordinate) > 0.5 * groundAlignment) {
+        discard;
+    }
+    float expandedAxisCoordinate = compressedAxisCoordinate / groundAlignment;
+    vec2 uncompressed = groundAxis * expandedAxisCoordinate + groundAxisPerpendicular * perpendicularCoordinate;
+    vec2 uv = inverseRotation * uncompressed + vec2(0.5);
+`
+      : `
     vec2 uv = inverseRotation * centered + vec2(0.5);
+`}
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         discard;
@@ -345,6 +462,12 @@ export const buildPointShaders = (
 ): CesiumGpuPointLayerShaders => ({
   vertexWebGL2: buildPointVertexShaderWebGL2(config),
   vertexWebGL1: buildPointVertexShaderWebGL1(config),
-  fragmentWebGL2: buildPointFragmentShaderWebGL2(config.spriteTextureUniform),
-  fragmentWebGL1: buildPointFragmentShaderWebGL1(config.spriteTextureUniform),
+  fragmentWebGL2: buildPointFragmentShaderWebGL2(
+    config.spriteTextureUniform,
+    config.alignWithGround,
+  ),
+  fragmentWebGL1: buildPointFragmentShaderWebGL1(
+    config.spriteTextureUniform,
+    config.alignWithGround,
+  ),
 });

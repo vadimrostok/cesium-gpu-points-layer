@@ -207,6 +207,7 @@ export interface CesiumGpuPointLayerShaderBuildInput {
   motionTextureUniform?: string;
   nowSecondsUniform?: string;
   maxExtrapolationSecondsUniform?: string;
+  alignWithGround?: boolean;
 }
 
 export interface GpuPointLayerShaderConfig {
@@ -242,6 +243,7 @@ export interface GpuPointLayerOptions {
   maxExtrapolationSeconds?: number;
   cullDotThreshold?: number;
   rotationEnabled?: boolean;
+  alignWithGround?: boolean;
   headingOffsetRadians?: number;
   sprite: SpriteTextureAtlas | PointLayerSpriteSource;
   enableAnimation?: boolean;
@@ -266,6 +268,7 @@ export interface CesiumGpuPointLayerOptions {
   depthMask?: boolean;
   sprite?: SpriteTextureAtlas | PointLayerSpriteSource;
   rotationEnabled?: boolean;
+  alignWithGround?: boolean;
 }
 
 export interface CesiumGpuPointLayerDescriptor<
