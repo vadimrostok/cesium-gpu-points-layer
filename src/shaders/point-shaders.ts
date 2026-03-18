@@ -30,6 +30,90 @@ vec2 pointTextureCoordinates(float pointIndex) {\
 }
 `;
 
+const buildCartographicNormalFunction = (): string => `\
+vec3 cartographicDegreesToGeodeticNormal(vec3 pointCartographic) {\
+    vec2 lonLatRadians = radians(pointCartographic.xy);\
+    float cosLatitude = cos(lonLatRadians.y);\
+    return normalize(vec3(\
+        cosLatitude * cos(lonLatRadians.x),\
+        cosLatitude * sin(lonLatRadians.x),\
+        sin(lonLatRadians.y)\
+    ));\
+}
+`;
+
+const buildGroundAlignmentVaryings = (
+  qualifier: 'out' | 'varying' | 'in',
+  alignWithGround: boolean,
+): string =>
+  alignWithGround
+    ? `${qualifier} float v_groundAlignment;\n${qualifier} vec2 v_flattenAxisScreen;`
+    : '';
+
+const buildGroundAlignmentVertexComputation = (alignWithGround: boolean): string =>
+  alignWithGround
+    ? `
+    // The local "ground plane" is the ellipsoid tangent plane at this point.
+    vec3 pointNormalWC = cartographicDegreesToGeodeticNormal(pointCartographic);
+    vec3 pointNormalEC = normalize((czm_view * vec4(pointNormalWC, 0.0)).xyz);
+    vec3 viewDirectionEC = normalize(-positionEC.xyz);
+    // This is the amount the image would be compressed due to viewing angle.
+    v_groundAlignment = clamp(abs(dot(pointNormalEC, viewDirectionEC)), 0.0, 1.0);
+    // This is just the projection of the camera direction onto the tangent plane.
+    vec3 flattenAxisEC = viewDirectionEC - pointNormalEC * dot(pointNormalEC, viewDirectionEC);
+    float flattenAxisLength = length(flattenAxisEC);
+    if (flattenAxisLength > 0.0001) {
+        flattenAxisEC /= flattenAxisLength;
+        vec3 lineAxisEC = normalize(cross(pointNormalEC, flattenAxisEC));
+        // Offset the point a little along that direction, project both positions, and
+        // subtract them to get the corresponding screen-space direction.
+        vec4 shiftedPositionEC = vec4(
+            positionEC.xyz + lineAxisEC * max(1000.0, length(positionEC.xyz) * 0.01),
+            1.0
+        );
+        vec4 shiftedClip = czm_projection * shiftedPositionEC;
+        vec2 projectedLineAxis = (shiftedClip.xy / shiftedClip.w) - (gl_Position.xy / gl_Position.w);
+        float projectedLineAxisLength = length(projectedLineAxis);
+        if (projectedLineAxisLength > 0.0001) {
+            vec2 lineAxisScreen = projectedLineAxis / projectedLineAxisLength;
+            // projectedLineAxis uses projected screen coordinates where +Y points up.
+            // gl_PointCoord uses point-sprite coordinates with origin at the upper-left,
+            // so +Y points down. Convert between those spaces before taking the perpendicular.
+            vec2 lineAxisPointCoord = vec2(lineAxisScreen.x, -lineAxisScreen.y);
+            // The flatten axis is perpendicular to the visible tangent line.
+            v_flattenAxisScreen = vec2(lineAxisPointCoord.y, -lineAxisPointCoord.x);
+        } else {
+            v_flattenAxisScreen = vec2(0.0, 0.0);
+        }
+    } else {
+        v_flattenAxisScreen = vec2(0.0, 0.0);
+    }
+`
+    : '';
+
+const buildGroundAlignmentFragmentComputation = (alignWithGround: boolean): string =>
+  alignWithGround
+    ? `
+    // Degenerate cases render poorly, so skip them entirely.
+    if (v_flattenAxisScreen.x == 0.0 && v_flattenAxisScreen.y == 0.0) {
+      discard;
+    }
+    float groundAlignment = max(v_groundAlignment, 0.001);
+    vec2 flattenAxisScreen = normalize(v_flattenAxisScreen);
+    vec2 lineAxisScreen = vec2(-flattenAxisScreen.y, flattenAxisScreen.x);
+    float compressedAxisCoordinate = dot(centered, flattenAxisScreen);
+    float lineAxisCoordinate = dot(centered, lineAxisScreen);
+    if (abs(compressedAxisCoordinate) > 0.5 * groundAlignment) {
+        discard;
+    }
+    float expandedAxisCoordinate = compressedAxisCoordinate / groundAlignment;
+    vec2 uncompressed = flattenAxisScreen * expandedAxisCoordinate + lineAxisScreen * lineAxisCoordinate;
+    vec2 uv = inverseRotation * uncompressed + vec2(0.5);
+`
+    : `
+    vec2 uv = inverseRotation * centered + vec2(0.5);
+`;
+
 export const buildPointVertexShaderWebGL2 = (
   config: CesiumGpuPointLayerShaderBuildInput,
 ): string => {
@@ -57,42 +141,8 @@ uniform float ${maxExtrapolationSecondsUniform};
   const motionTextureUniformDeclaration = hasMotion
     ? `uniform highp sampler2D ${motionTextureUniform};\n`
     : '';
-  const extrapolateCall = hasMotion
-    ? `cartographicDegreesToCartesian(extrapolatePointCartographic(pointData, motionData))`
-    : 'cartographicDegreesToCartesian(pointData.rgb)';
-  const groundAlignmentVarying = alignWithGround ? 'out float v_groundAlignment;' : '';
-  const groundAxisVarying = alignWithGround ? 'out vec2 v_groundAxis;' : '';
-  const groundAlignmentComputation = alignWithGround
-    ? `
-    vec3 viewDirectionEC = normalize(-positionEC.xyz);
-    vec3 pointNormalEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
-    // This is the amount the image would be compressed due to viewing angle
-    v_groundAlignment = clamp(abs(dot(pointNormalEC, viewDirectionEC)), 0.0, 1.0);
-    // Compress along the tangent-plane direction that points toward the camera.
-    // The perpendicular in-plane direction stays visible as the "thin line" near the limb.
-    vec3 flattenAxisEC = viewDirectionEC - pointNormalEC * dot(pointNormalEC, viewDirectionEC);
-    float flattenAxisLength = length(flattenAxisEC);
-    if (flattenAxisLength > 0.0001) {
-        flattenAxisEC /= flattenAxisLength;
-    } else {
-        flattenAxisEC = vec3(1.0, 0.0, 0.0);
-    }
-    vec4 shiftedPositionEC = vec4(
-        positionEC.xyz + flattenAxisEC * max(1000.0, length(positionEC.xyz) * 0.01),
-        1.0
-    );
-    vec4 shiftedClip = czm_projection * shiftedPositionEC;
-    vec2 projectedFlattenAxis = (shiftedClip.xy / shiftedClip.w) - (gl_Position.xy / gl_Position.w);
-    float projectedFlattenAxisLength = length(projectedFlattenAxis);
-    if (projectedFlattenAxisLength > 0.0001) {
-        v_groundAxis = projectedFlattenAxisLength / projectedFlattenAxis; // vec2(0.5, 0.5); // projectedFlattenAxis / projectedFlattenAxisLength;
-        // Rotate counterclockwise
-        v_groundAxis = vec2(-v_groundAxis.y, v_groundAxis.x);
-    } else {
-        v_groundAxis = vec2(0.0, 0.0);
-    }
-`
-    : '';
+  const groundAlignmentVarying = buildGroundAlignmentVaryings('out', alignWithGround);
+  const groundAlignmentComputation = buildGroundAlignmentVertexComputation(alignWithGround);
 
   const extrapolateFunction = hasMotion
     ? `
@@ -133,8 +183,8 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
         -sin(latitudeRadians) * sin(longitudeRadians),
         cosLatitude
     ));
-    // directionX is north component; directionY is east component in local tangent space.
-    vec3 direction = normalize(northUnit * motionData.y + eastUnit * motionData.z);
+    // directionX is east component; directionY is north component in local tangent space.
+    vec3 direction = normalize(eastUnit * motionData.y + northUnit * motionData.z);
     vec3 nextNormal = baseNormal * angularDistanceCos + direction * angularDistanceSin;
 
     return vec3(
@@ -161,16 +211,11 @@ ${motionUniforms}
 
 out float v_headingRadians;
 ${groundAlignmentVarying}
-${groundAxisVarying}
+
+${buildCartographicNormalFunction()}
 
 vec3 cartographicDegreesToCartesian(vec3 pointCartographic) {
-    vec2 lonLatRadians = radians(pointCartographic.xy);
-    float cosLatitude = cos(lonLatRadians.y);
-    vec3 geodeticNormal = normalize(vec3(
-        cosLatitude * cos(lonLatRadians.x),
-        cosLatitude * sin(lonLatRadians.x),
-        sin(lonLatRadians.y)
-    ));
+    vec3 geodeticNormal = cartographicDegreesToGeodeticNormal(pointCartographic);
 
     vec3 radiiSquared = czm_ellipsoidRadii * czm_ellipsoidRadii;
     vec3 k = radiiSquared * geodeticNormal / sqrt(dot(radiiSquared * geodeticNormal, geodeticNormal));
@@ -184,8 +229,11 @@ void main() {
     int pointIndex = gl_VertexID + int(${config.attributeName} * 0.0);
     vec4 pointData = texelFetch(${config.dataTextureUniform}, ${textureCoordinates}, 0);
     ${motionTextureRead}
-    vec3 positionWC = ${extrapolateCall};
-    vec4 positionEC = czm_view * vec4(positionWC, 1.0);
+    vec3 pointCartographic = ${hasMotion
+      ? 'extrapolatePointCartographic(pointData, motionData)'
+      : 'pointData.rgb'};
+    vec3 positionWC = cartographicDegreesToCartesian(pointCartographic); // WC = world coordinates in Cesium's Earth-fixed Cartesian frame.
+    vec4 positionEC = czm_view * vec4(positionWC, 1.0); // EC = eye coordinates, also called camera/view space.
 
     gl_Position = czm_projection * positionEC;
 
@@ -217,41 +265,8 @@ uniform float ${maxExtrapolationSecondsUniform};
   const motionDataRead = hasMotion
     ? `vec4 motionData = texture2D(${motionTextureUniform}, pointTextureCoordinates(${config.attributeName}));`
     : '';
-  const extrapolateCall = hasMotion
-    ? 'cartographicDegreesToCartesian(extrapolatePointCartographic(pointData, motionData))'
-    : 'cartographicDegreesToCartesian(pointData.rgb)';
-  const groundAlignmentVarying = alignWithGround ? 'varying float v_groundAlignment;' : '';
-  const groundAxisVarying = alignWithGround ? 'varying vec2 v_groundAxis;' : '';
-  const groundAlignmentComputation = alignWithGround
-    ? `
-    vec3 viewDirectionEC = normalize(-positionEC.xyz);
-    vec3 pointNormalEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
-    v_groundAlignment = clamp(abs(dot(pointNormalEC, viewDirectionEC)), 0.0, 1.0);
-    // Compress along the tangent-plane direction that points toward the camera.
-    // The perpendicular in-plane direction stays visible as the "thin line" near the limb.
-    vec3 flattenAxisEC = viewDirectionEC - pointNormalEC * dot(pointNormalEC, viewDirectionEC);
-    float flattenAxisLength = length(flattenAxisEC);
-    if (flattenAxisLength > 0.0001) {
-        flattenAxisEC /= flattenAxisLength;
-    } else {
-        flattenAxisEC = vec3(1.0, 0.0, 0.0);
-    }
-    vec4 shiftedPositionEC = vec4(
-        positionEC.xyz + flattenAxisEC * max(1000.0, length(positionEC.xyz) * 0.01),
-        1.0
-    );
-    vec4 shiftedClip = czm_projection * shiftedPositionEC;
-    vec2 projectedFlattenAxis = (shiftedClip.xy / shiftedClip.w) - (gl_Position.xy / gl_Position.w);
-    float projectedFlattenAxisLength = length(projectedFlattenAxis);
-    if (projectedFlattenAxisLength > 0.0001) {
-        v_groundAxis = projectedFlattenAxisLength / projectedFlattenAxis;
-        // Rotate counterclockwise
-        v_groundAxis = vec2(-v_groundAxis.y, v_groundAxis.x);
-    } else {
-        v_groundAxis = vec2(0.0, 0.0);
-    }
-`
-    : '';
+  const groundAlignmentVarying = buildGroundAlignmentVaryings('varying', alignWithGround);
+  const groundAlignmentComputation = buildGroundAlignmentVertexComputation(alignWithGround);
   const extrapolateFunction = hasMotion
     ? `
 vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
@@ -291,8 +306,8 @@ vec3 extrapolatePointCartographic(vec4 pointData, vec4 motionData) {
         -sin(latitudeRadians) * sin(longitudeRadians),
         cosLatitude
     ));
-    // directionX is north component; directionY is east component in local tangent space.
-    vec3 direction = normalize(northUnit * motionData.y + eastUnit * motionData.z);
+    // directionX is east component; directionY is north component in local tangent space.
+    vec3 direction = normalize(eastUnit * motionData.y + northUnit * motionData.z);
     vec3 nextNormal = baseNormal * angularDistanceCos + direction * angularDistanceSin;
 
     return vec3(
@@ -317,18 +332,13 @@ uniform float u_pointScale;
 
 varying float v_headingRadians;
 ${groundAlignmentVarying}
-${groundAxisVarying}
 
 ${coordinates}
 
+${buildCartographicNormalFunction()}
+
 vec3 cartographicDegreesToCartesian(vec3 pointCartographic) {
-    vec2 lonLatRadians = radians(pointCartographic.xy);
-    float cosLatitude = cos(lonLatRadians.y);
-    vec3 geodeticNormal = normalize(vec3(
-        cosLatitude * cos(lonLatRadians.x),
-        cosLatitude * sin(lonLatRadians.x),
-        sin(lonLatRadians.y)
-    ));
+    vec3 geodeticNormal = cartographicDegreesToGeodeticNormal(pointCartographic);
 
     vec3 radiiSquared = czm_ellipsoidRadii * czm_ellipsoidRadii;
     vec3 k = radiiSquared * geodeticNormal / sqrt(dot(radiiSquared * geodeticNormal, geodeticNormal));
@@ -341,8 +351,11 @@ ${extrapolateFunction}
 void main() {
     vec4 pointData = texture2D(${config.dataTextureUniform}, pointTextureCoordinates(${config.attributeName}));
     ${motionDataRead}
-    vec3 positionWC = ${extrapolateCall};
-    vec4 positionEC = czm_view * vec4(positionWC, 1.0);
+    vec3 pointCartographic = ${hasMotion
+      ? 'extrapolatePointCartographic(pointData, motionData)'
+      : 'pointData.rgb'};
+    vec3 positionWC = cartographicDegreesToCartesian(pointCartographic); // WC = world coordinates in Cesium's Earth-fixed Cartesian frame.
+    vec4 positionEC = czm_view * vec4(positionWC, 1.0); // EC = eye coordinates, also called camera/view space.
 
     gl_Position = czm_projection * positionEC;
 
@@ -362,8 +375,7 @@ uniform sampler2D ${spriteTextureUniform};
 uniform float u_rotationEnabled;
 
 in float v_headingRadians;
-${alignWithGround ? 'in float v_groundAlignment;' : ''}
-${alignWithGround ? 'in vec2 v_groundAxis;' : ''}
+${buildGroundAlignmentVaryings('in', alignWithGround)}
 
 void main() {
     vec2 centered = gl_PointCoord - vec2(0.5);
@@ -372,26 +384,7 @@ void main() {
     sine = mix(0.0, sine, u_rotationEnabled);
     cosine = mix(1.0, cosine, u_rotationEnabled);
     mat2 inverseRotation = mat2(cosine, sine, -sine, cosine);
-${alignWithGround
-      ? `
-    if (v_groundAxis.x == 0.0 && v_groundAxis.y == 0.0) {
-      discard;
-    }
-    float groundAlignment = max(v_groundAlignment, 0.001);
-    vec2 groundAxis = normalize(v_groundAxis);
-    vec2 groundAxisPerpendicular = vec2(-groundAxis.y, groundAxis.x);
-    float compressedAxisCoordinate = dot(centered, groundAxis);
-    float perpendicularCoordinate = dot(centered, groundAxisPerpendicular);
-    if (abs(compressedAxisCoordinate) > 0.5 * groundAlignment) {
-        discard;
-    }
-    float expandedAxisCoordinate = compressedAxisCoordinate / groundAlignment;
-    vec2 uncompressed = groundAxis * expandedAxisCoordinate + groundAxisPerpendicular * perpendicularCoordinate;
-    vec2 uv = inverseRotation * uncompressed + vec2(0.5);
-`
-      : `
-    vec2 uv = inverseRotation * centered + vec2(0.5);
-`}
+${buildGroundAlignmentFragmentComputation(alignWithGround)}
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         discard;
@@ -414,8 +407,7 @@ uniform sampler2D ${spriteTextureUniform};
 uniform float u_rotationEnabled;
 
 varying float v_headingRadians;
-${alignWithGround ? 'varying float v_groundAlignment;' : ''}
-${alignWithGround ? 'varying vec2 v_groundAxis;' : ''}
+${buildGroundAlignmentVaryings('varying', alignWithGround)}
 
 void main() {
     vec2 centered = gl_PointCoord - vec2(0.5);
@@ -424,26 +416,7 @@ void main() {
     sine = mix(0.0, sine, u_rotationEnabled);
     cosine = mix(1.0, cosine, u_rotationEnabled);
     mat2 inverseRotation = mat2(cosine, sine, -sine, cosine);
-${alignWithGround
-      ? `
-    if (v_groundAxis.x == 0.0 && v_groundAxis.y == 0.0) {
-      discard;
-    }
-    float groundAlignment = max(v_groundAlignment, 0.001);
-    vec2 groundAxis = normalize(v_groundAxis);
-    vec2 groundAxisPerpendicular = vec2(-groundAxis.y, groundAxis.x);
-    float compressedAxisCoordinate = dot(centered, groundAxis);
-    float perpendicularCoordinate = dot(centered, groundAxisPerpendicular);
-    if (abs(compressedAxisCoordinate) > 0.5 * groundAlignment) {
-        discard;
-    }
-    float expandedAxisCoordinate = compressedAxisCoordinate / groundAlignment;
-    vec2 uncompressed = groundAxis * expandedAxisCoordinate + groundAxisPerpendicular * perpendicularCoordinate;
-    vec2 uv = inverseRotation * uncompressed + vec2(0.5);
-`
-      : `
-    vec2 uv = inverseRotation * centered + vec2(0.5);
-`}
+${buildGroundAlignmentFragmentComputation(alignWithGround)}
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         discard;

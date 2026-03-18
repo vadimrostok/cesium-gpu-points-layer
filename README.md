@@ -40,7 +40,7 @@ The renderer keeps per-marker payload in packed textures and submits one primiti
    - All rendering inputs are ultimately packed as numeric channels; sprite visuals come from a rasterized image atlas (`SpriteTextureAtlas`).
    - `GpuPointLayer` converts each record into an internal prepared record with:
      - normalized world direction vector (`directionFromEarthCenter`)
-     - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`)
+     - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`, where `directionX` is east and `directionY` is north in the local tangent plane)
      - defaulted altitude/heading values when optional fields are missing.
 
 2. **Pack into float textures**
@@ -52,8 +52,8 @@ The renderer keeps per-marker payload in packed textures and submits one primiti
    - One float texture for all points means a single draw primitive can represent many points.
    - A second motion texture is optionally allocated when animation is enabled:
      - `R`: speed (m/s)
-     - `G`: direction X
-     - `B`: direction Y
+     - `G`: direction X (east)
+     - `B`: direction Y (north)
      - `A`: anchor timestamp seconds
 
 3. **Visibility and culling**
@@ -61,9 +61,10 @@ The renderer keeps per-marker payload in packed textures and submits one primiti
    - `cullDotThreshold` controls hemisphere/backface visibility cut.
 
 4. **Shader path**
-   - Vertex shader reads point attributes from packed texture by index (WebGL1 and WebGL2 variants).
-   - Optional motion path computes extrapolated geographic position when speed/time data exists.
-   - Fragment shader samples the provided sprite texture and applies optional rotation.
+ - Vertex shader reads point attributes from packed texture by index (WebGL1 and WebGL2 variants).
+ - Optional motion path computes extrapolated geographic position when speed/time data exists.
+ - Fragment shader samples the provided sprite texture and applies optional rotation.
+ - Optional `alignWithGround` derives a local tangent-plane basis from the ellipsoid normal, projects that basis to screen space, and compresses the sprite so near-edge views become a thin line while top-of-view points stay largely unchanged.
 
 5. **Runtime updates**
    - GPU upload includes:
@@ -163,6 +164,7 @@ High-level layer wrapper:
 | `maxExtrapolationSeconds` | `number` | one-year | Clamp for motion extrapolation |
 | `cullDotThreshold` | `number` | `0.5` | Hemisphere culling threshold |
 | `rotationEnabled` | `boolean` | `true` | Enable per-point sprite rotation |
+| `alignWithGround` | `boolean` | `false` | At glancing angles, compress the sprite along the local ground-horizon axis and keep the rest of the point area transparent for a thin line profile |
 | `headingOffsetRadians` | `number` | `0` | Constant heading offset added in shader |
 | `enableAnimation` | `boolean` | `true` | Enables speed-based extrapolation path |
 | `defaultAltitudeMeters` | `number` | `10` | Used when input records do not provide altitude |
@@ -200,6 +202,7 @@ Single-point hemisphere predicate.
 - `buildPointShaders(config)`
 - `buildPointVertexShaderWebGL1/2(config)`
 - `buildPointFragmentShaderWebGL1/2(spriteTextureUniform?)`
+- See `docs/shader-pipeline.md` for a high-level explanation of the shader setup.
 
 ### Defaults and constants
 
@@ -213,16 +216,178 @@ Single-point hemisphere predicate.
 
 ### Types and contracts
 
-- `BasePointRecord`
-- `PreparedPointRecord`
-- `PointLayerSpriteSource`
-- `SpriteTextureAtlas`
-- `PointTextureLayout`
-- `PackedPointTexture`
-- `GpuPointLayerShaderConfig`
-- `CesiumGpuPointLayerDescriptor`
-- `CesiumGpuPointLayerUniforms`
-- `CesiumGpuPointLayerShaderBuildInput`
+### `BasePointRecord`
+
+Minimum input shape accepted by `GpuPointLayer`.
+
+```ts
+interface BasePointRecord {
+  id: string;
+  longitude: number;
+  latitude: number;
+  altitudeMeters?: number;
+  headingRadians?: number;
+  speedMetersPerSecond?: number;
+}
+```
+
+### `PreparedPointRecord`
+
+Prepared record shape used internally by the lower-level renderer after CPU-side preprocessing.
+
+```ts
+interface PreparedPointRecord extends BasePointRecord {
+  directionFromEarthCenter: Cesium.Cartesian3;
+}
+```
+
+### `PointLayerSpriteSource`
+
+Remote sprite source definition. The layer rasterizes the image and uploads it as a texture.
+
+```ts
+interface PointLayerSpriteSource {
+  url: string;
+  width?: number;
+  height?: number;
+  resolution?: number;
+}
+```
+
+### `SpriteTextureAtlas`
+
+Pre-rasterized sprite bytes ready to upload to the GPU.
+
+```ts
+interface SpriteTextureAtlas {
+  width: number;
+  height: number;
+  pixels: Uint8Array;
+}
+```
+
+### `PointTextureLayout`
+
+Texture dimensions used for packed point data.
+
+```ts
+interface PointTextureLayout {
+  width: number;
+  height: number;
+  capacity: number;
+}
+```
+
+### `PackedPointTexture`
+
+Return shape used by packing helpers.
+
+```ts
+interface PackedPointTexture {
+  data: Float32Array;
+  layout: PointTextureLayout;
+  count: number;
+}
+```
+
+### `GpuPointLayerShaderConfig`
+
+Uniform names used by the generated shaders.
+
+```ts
+interface GpuPointLayerShaderConfig {
+  dataTextureUniform: string;
+  dataTextureDimensionsUniform: string;
+  spriteTextureUniform: string;
+  motionTextureUniform: string;
+  nowSecondsUniform: string;
+  maxExtrapolationSecondsUniform: string;
+  rotationEnabledUniform: string;
+}
+```
+
+### `CesiumGpuPointLayerUniforms`
+
+Uniform-name mapping consumed by the low-level Cesium draw-command wrapper.
+
+```ts
+interface CesiumGpuPointLayerUniforms {
+  dataTexture: string;
+  dataTextureDimensions: string;
+  motionTexture?: string;
+  nowSeconds?: string;
+  maxExtrapolationSeconds?: string;
+  spriteTexture?: string;
+  rotationEnabled?: string;
+}
+```
+
+### `CesiumGpuPointLayerShaderBuildInput`
+
+Input passed into the shader builder functions.
+
+```ts
+interface CesiumGpuPointLayerShaderBuildInput {
+  attributeName: string;
+  dataTextureUniform: string;
+  dataTextureDimensionsUniform: string;
+  spriteTextureUniform?: string;
+  headingOffsetRadians?: number;
+  hasMotionExtrapolation?: boolean;
+  motionTextureUniform?: string;
+  nowSecondsUniform?: string;
+  maxExtrapolationSecondsUniform?: string;
+  alignWithGround?: boolean;
+}
+```
+
+### `CesiumGpuPointLayerDescriptor<TInput, TPrepared>`
+
+Low-level renderer descriptor used by `CesiumPointTextureLayer`.
+
+```ts
+interface CesiumGpuPointLayerDescriptor<
+  TInput extends BasePointRecord,
+  TPrepared extends PreparedPointRecord,
+> {
+  name: string;
+  shaders: CesiumGpuPointLayerShaders;
+  uniforms: CesiumGpuPointLayerUniforms;
+  indexAttributeName: string;
+  indexAttributeLocation: number;
+  boundingSphere: Cesium.BoundingSphere;
+  prepareRecord: (input: TInput) => TPrepared | null;
+  packMainData: (
+    record: TPrepared,
+    output: Float32Array,
+    valueOffset: number,
+  ) => void;
+  packMotionData?: (
+    record: TPrepared,
+    output: Float32Array,
+    valueOffset: number,
+  ) => void;
+  cullDotThreshold?: number;
+  options?: CesiumGpuPointLayerOptions;
+  getNowSeconds?: (frameState: CesiumGpuPointLayerFrameState) => number;
+  extraUniformMap?: (
+    input: CesiumGpuPointLayerUniformInputs,
+  ) => Record<string, () => unknown>;
+}
+```
+
+### `CesiumGpuPointLayerShaders`
+
+Generated shader source bundle for both WebGL versions.
+
+```ts
+interface CesiumGpuPointLayerShaders {
+  vertexWebGL2: string;
+  vertexWebGL1: string;
+  fragmentWebGL2: string;
+  fragmentWebGL1: string;
+}
+```
 
 ## Testing
 
@@ -244,3 +409,18 @@ This module is most beneficial for:
 - datasets with near-real-time position updates,
 - repeated updates where full entities are too heavy,
 - scenarios where a flat sprite texture atlas per layer is a good semantic fit.
+
+## Rendering benchmarks
+
+Benchmark numbers below are copied from the sibling demo project `cesium-gpu-dots`, which renders the same library in a real Cesium scene.
+
+> 34833 points: aircraft 6559, ships 28264, earthquakes 10; Images based on SVG sources.
+
+| Setting | Scenario | Improvement (low-high fps) | Billboards | GPU dots |
+| --- | --- | --- | --- | --- |
+| high / no throttling | static | `27.7% - 17.5%` | `36-40 fps` | `46-47 fps` |
+| high / no throttling | moving | `33.3% - 30.3%` | `30-33 fps` | `40-43 fps` |
+| high / no throttling | scrolling in and out (Europe) | `38.4% - 11.1%` | `26-45 fps` | `36-50 fps` |
+| high / CPU throttling x6 | static | `53% - 51.6%` | `30-31 fps` | `46-47 fps` |
+| high / CPU throttling x6 | moving | `16.6% - 90.9%` | `21-22 fps` | `38-42 fps` |
+| high / CPU throttling x6 | scrolling in-out | `62.5% - 61.9%` | `16-21 fps` | `26-34 fps` |

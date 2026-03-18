@@ -14,6 +14,7 @@ export interface LayerDefinition {
   minPointSize?: number;
   maxPointSize?: number;
   rotationEnabled: boolean;
+  alignWithGround?: boolean;
   enableAnimation: boolean;
   headingOffsetRadians: number;
   defaultAltitudeMeters: number;

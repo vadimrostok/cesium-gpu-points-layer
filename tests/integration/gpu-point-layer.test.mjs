@@ -50,6 +50,19 @@ test('GpuPointLayer normalizes missing optional fields into defaults', () => {
     assert.ok(withMotionPoint);
     assert.ok(Math.abs(withMotionPoint.directionX) < 1e-12);
     assert.ok(withMotionPoint.directionY > 0.99);
+
+    const eastboundPoint = /** @type {any} */ (
+      internal.pointLayer.descriptor.prepareRecord({
+        id: 'eastbound',
+        longitude: 1,
+        latitude: 1,
+        headingRadians: 0,
+        speedMetersPerSecond: 10,
+      })
+    );
+    assert.ok(eastboundPoint);
+    assert.ok(eastboundPoint.directionX > 0.99);
+    assert.ok(Math.abs(eastboundPoint.directionY) < 1e-12);
     assert.equal(withMotionPoint.directionFromEarthCenter instanceof Cesium.Cartesian3, true);
 
     layer.destroy();
@@ -71,6 +84,7 @@ test('draw order and motion/rotation config propagate to internal layer', () => 
         drawOrder: 7,
         enableAnimation: false,
         rotationEnabled: false,
+        alignWithGround: true,
       },
     );
 
@@ -80,6 +94,7 @@ test('draw order and motion/rotation config propagate to internal layer', () => 
     assert.equal(layer.drawOrder, 7);
     assert.equal(pointLayer.hasMotionTexture, false);
     assert.equal(pointLayer.rotationEnabled, false);
+    assert.equal(pointLayer.descriptor.options.alignWithGround, true);
 
     layer.setVisiblePointIds(['p1']);
     assert.equal(pointLayer.visiblePointIds?.size, 1);
