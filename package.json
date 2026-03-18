@@ -25,6 +25,7 @@
     "demo:build": "vite build --config demo/vite.config.ts",
     "demo:preview": "vite preview --config demo/vite.config.ts --host 0.0.0.0 --port 4173",
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
     "clean": "rimraf dist",
     "test": "npm run build && node --test ./tests/**/*.test.mjs",
     "test:unit": "npm run build && node --test ./tests/unit/**/*.test.mjs",
