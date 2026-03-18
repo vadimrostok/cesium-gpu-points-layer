@@ -14,7 +14,7 @@ This was made to provide a lightweight overlay path for dense icon clouds that s
 
 `Cesium.BillboardCollection`/`Entity` workflows are convenient, but can become expensive when:
 
-- point counts are high (tens/hundreds of thousands),
+- point counts are high (e.g. hundreds of thousands),
 - data changes every frame or near-real-time,
 - marker payloads are mostly fixed metadata with position and direction, not full entity behavior.
 
