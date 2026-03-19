@@ -2,7 +2,7 @@
 
 High-performance Cesium marker rendering with rasterized image sprites (2D icons) packed into GPU float textures.
 
-This library is designed for dense marker layers with frequent updates: roughly 50-100k points is a practical target (larger counts may work depending on the device), with optional per-point rotation and optional movement animation.
+This library is designed for dense marker layers with frequent updates: up to a million of points is a practical target (larger counts may work depending on the device), with optional per-point rotation and optional movement animation.
 
 This was made to provide a lightweight overlay path for dense icon clouds that stays responsive when `Entity`/billboard APIs start to show overhead.
 
