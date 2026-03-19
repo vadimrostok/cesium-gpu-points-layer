@@ -20,64 +20,6 @@ This was made to provide a lightweight overlay path for dense icon clouds that s
 
 The renderer keeps per-marker payload in packed textures and submits one primitive per layer. In practice, the runtime tends to do less per-frame work because updates are focused on compact texture + uniform uploads.
 
-## Package layout
-
-- `GpuPointLayer` / `CesiumGpuPointLayer`
-  - public entry point with record preparation, packing hooks, and ready-to-add Cesium primitive.
-- `CesiumPointTextureLayer`
-  - lower-level primitive wrapper around draw-command/texture/pipeline internals.
-- `src/shaders/point-shaders.ts`
-  - GLSL builder functions for WebGL1/WebGL2 paths.
-- `src/cpu-pipeline`
-  - CPU-side packing helpers, viewport/visibility helpers, and shader-config defaults.
-- `src/types.ts`
-  - shared API contracts and public types.
-
-## How it works (low-level)
-
-1. **Prepare input records**
-   - `BasePointRecord` is the required minimum input contract.
-   - All rendering inputs are ultimately packed as numeric channels; sprite visuals come from a rasterized image atlas (`SpriteTextureAtlas`).
-   - `GpuPointLayer` converts each record into an internal prepared record with:
-     - normalized world direction vector (`directionFromEarthCenter`)
-     - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`, where `directionX` is east and `directionY` is north in the local tangent plane)
-     - defaulted altitude and marker rotation values when optional fields are missing
-     - independent marker rotation and animation direction inputs (`rotationRadians` and `movementDirectionRadians`)
-
-2. **Pack into float textures**
-   - Point attributes are packed into an RGBA float texture:
-     - `R`: longitude
-     - `G`: latitude
-     - `B`: altitude (meters)
-     - `A`: heading (radians)
-   - One float texture for all points means a single draw primitive can represent many points.
-   - A second motion texture is optionally allocated when animation is enabled:
-     - `R`: speed (m/s)
-     - `G`: direction X (east)
-     - `B`: direction Y (north)
-     - `A`: anchor timestamp seconds
-
-3. **Visibility and culling**
-   - Optional per-frame visibility filtering uses camera direction + precomputed normalized Earth direction vectors.
-   - `cullDotThreshold` controls hemisphere/backface visibility cut.
-
-4. **Shader path**
- - Vertex shader reads point attributes from packed texture by index (WebGL1 and WebGL2 variants).
- - Optional motion path computes extrapolated geographic position when speed/time data exists.
- - Fragment shader samples the provided sprite texture and applies optional rotation.
- - Optional `alignWithGround` derives a local tangent-plane basis from the ellipsoid normal, projects that basis to screen space, and compresses the sprite so near-edge views become a thin line while top-of-view points stay largely unchanged.
-
-5. **Runtime updates**
-   - GPU upload includes:
-     - data texture updates when visibility or records change,
-     - sprite texture upload on sprite/source changes,
-     - draw command submission with uniforms for camera-scaled sprite size.
-
-6. **Sprite composition and output**
-   - Fragment shader samples the configured sprite atlas texture directly from a texture uniform.
-   - Optional motion path projects each marker forward from `speedMetersPerSecond`.
-   - Optional `rotationEnabled` rotates sprite samples in shader space so heading is visually respected.
-
 ## Installation
 
 ```bash
@@ -136,7 +78,69 @@ const layer = new GpuPointLayer(points, {
 viewer.scene.primitives.add(layer.primitive);
 ```
 
-## API reference (important)
+## Package layout
+
+- `src/gpu-point-layer.ts`
+    - public entry point with record preparation, packing hooks, and ready-to-add Cesium primitive.
+- `src/point-texture-layer.ts`
+    - lower-level primitive wrapper around draw-command/texture/pipeline internals.
+- `src/shaders/point-shaders.ts`
+    - GLSL builder functions for WebGL1/WebGL2 paths.
+- `src/cpu-pipeline`
+    - CPU-side packing helpers, viewport/visibility helpers, and shader-config defaults.
+- `src/types.ts`
+    - shared API contracts and public types.
+
+## How it works (low-level)
+
+`GpuPointLayer` receives a marker URL with other configuration options and provides a custom primitive that can be added to the scene. The marker is rasterised into a virtual canvas and converted into a texture for shader uniforms. Points describing markers' locations, rotations, and movements can be passed via a method or in layer constructor. This data is converted into a texture (or two textures if we need animation) and passed to shaders as uniforms as well.
+
+The core of the library is the `DrawCommand` based on `PrimitiveType.POINTS` and shaders built by the lib. The command is pushed to `frameState.commandList` by our primitive in its `update` method.
+
+Exact positions and other marker properties are derived from textures in code running on the GPU. I think this is the main reason it's able to offer performance improvements. In the vertex shader, locations are converted from Cartographic to Cartesian coordinates, then to world and eye coordinates, and finally multiplied by czm_projection, yielding our point's `gl_Position`. `gl_PointSize` is defined by `cameraDistance` and the marker layer configuration. When `alignWithGround` is enabled, the vertex shader computes `v_groundAlignment`: how compressed the marker should be (e.g. near globe edge) and `v_flattenAxisScreen`: compression axis angle in screen space.
+
+Fragment shader samples pixels from our texture and applies rotation and "flattening" logic, if needed.
+
+1. **Prepare input records**
+    - `BasePointRecord` is the required minimum input contract.
+    - All rendering inputs are ultimately packed as numeric channels; sprite visuals come from a rasterized image atlas (`SpriteTextureAtlas`).
+    - `GpuPointLayer` converts each record into an internal prepared record with:
+        - normalized world direction vector (`directionFromEarthCenter`)
+        - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`, where `directionX` is east and `directionY` is north in the local tangent plane)
+        - defaulted altitude and marker rotation values when optional fields are missing
+        - independent marker rotation and animation direction inputs (`rotationRadians` and `movementDirectionRadians`)
+
+2. **Pack into float textures**
+    - Point attributes are packed into an RGBA float texture:
+        - `R`: longitude
+        - `G`: latitude
+        - `B`: altitude (meters)
+        - `A`: heading (radians)
+    - One float texture for all points means a single draw primitive can represent many points.
+    - A second motion texture is optionally allocated when animation is enabled:
+        - `R`: speed (m/s)
+        - `G`: direction X (east)
+        - `B`: direction Y (north)
+        - `A`: anchor timestamp seconds
+
+3. **Shader path**
+- Vertex shader reads point attributes from packed texture by index (WebGL1 and WebGL2 variants).
+- Optional motion path computes extrapolated geographic position when speed/time data exists.
+- Fragment shader samples the provided sprite texture and applies optional rotation.
+- Optional `alignWithGround` derives a local tangent-plane basis from the ellipsoid normal, projects that basis to screen space, and compresses the sprite so near-edge views become a thin line while top-of-view points stay largely unchanged.
+
+4. **Runtime updates**
+    - GPU upload includes:
+        - data texture updates when visibility or records change,
+        - sprite texture upload on sprite/source changes,
+        - draw command submission with uniforms for camera-scaled sprite size.
+
+5. **Sprite composition and output**
+    - Fragment shader samples the configured sprite atlas texture directly from a texture uniform.
+    - Optional motion path projects each marker forward from `speedMetersPerSecond`.
+
+    
+## API reference
 
 ### `GpuPointLayer<TPoint extends BasePointRecord>`
 
@@ -405,7 +409,6 @@ interface CesiumGpuPointLayerShaders {
 
 ## Compatibility notes
 
-- `CesiumGpuPointLayer` is exported as a compatibility alias for older internal names.
 - The library targets modern Node/ESM for package consumers and `Cesium` as a peer dependency.
 - Public API preserves the same external shape as the previous monolith while improving maintainability.
 
