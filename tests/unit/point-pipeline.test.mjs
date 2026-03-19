@@ -30,13 +30,13 @@ test('packPointsIntoFloatTexture reuses compatible storage', () => {
     out[offset] = point.longitude;
     out[offset + 1] = point.latitude;
     out[offset + 2] = point.altitudeMeters;
-    out[offset + 3] = point.headingRadians;
+    out[offset + 3] = point.rotationRadians;
   };
 
   const first = packPointsIntoFloatTexture(
     [
-      { id: 'a', longitude: 1, latitude: 2, altitudeMeters: 3, headingRadians: 4 },
-      { id: 'b', longitude: 5, latitude: 6, altitudeMeters: 7, headingRadians: 8 },
+      { id: 'a', longitude: 1, latitude: 2, altitudeMeters: 3, rotationRadians: 4 },
+      { id: 'b', longitude: 5, latitude: 6, altitudeMeters: 7, rotationRadians: 8 },
     ],
     undefined,
     undefined,
@@ -51,7 +51,7 @@ test('packPointsIntoFloatTexture reuses compatible storage', () => {
   assert.equal(first.data[4], 5);
 
   const second = packPointsIntoFloatTexture(
-    [{ id: 'c', longitude: 9, latitude: 10, altitudeMeters: 11, headingRadians: 12 }],
+    [{ id: 'c', longitude: 9, latitude: 10, altitudeMeters: 11, rotationRadians: 12 }],
     first.data,
     first.layout,
     writePoint,

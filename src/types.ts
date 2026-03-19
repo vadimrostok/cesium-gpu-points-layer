@@ -132,7 +132,14 @@ export interface BasePointRecord {
   longitude: number;
   latitude: number;
   altitudeMeters?: number;
-  headingRadians?: number;
+  /** Rotation of the marker sprite in radians. */
+  rotationRadians?: number;
+  /**
+   * Animation movement direction in radians within the local east-north tangent plane.
+   * 0 is east, PI / 2 is north, and so on.
+   * If omitted, motion follows marker rotation when available; otherwise no motion.
+   */
+  movementDirectionRadians?: number;
   speedMetersPerSecond?: number;
 }
 

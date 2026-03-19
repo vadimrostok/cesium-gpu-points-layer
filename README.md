@@ -41,7 +41,8 @@ The renderer keeps per-marker payload in packed textures and submits one primiti
    - `GpuPointLayer` converts each record into an internal prepared record with:
      - normalized world direction vector (`directionFromEarthCenter`)
      - optional speed components (`speedMetersPerSecond`, `directionX`, `directionY`, where `directionX` is east and `directionY` is north in the local tangent plane)
-     - defaulted altitude/heading values when optional fields are missing.
+     - defaulted altitude and marker rotation values when optional fields are missing
+     - independent marker rotation and animation direction inputs (`rotationRadians` and `movementDirectionRadians`)
 
 2. **Pack into float textures**
    - Point attributes are packed into an RGBA float texture:
@@ -109,7 +110,8 @@ const points: BasePointRecord[] = [
     longitude: -122.4,
     latitude: 37.8,
     altitudeMeters: 10_000,
-    headingRadians: 1.3,
+    rotationRadians: 1.3,
+    movementDirectionRadians: 1.571,
     speedMetersPerSecond: 120,
   },
   {
@@ -168,7 +170,7 @@ High-level layer wrapper:
 | `headingOffsetRadians` | `number` | `0` | Constant heading offset added in shader |
 | `enableAnimation` | `boolean` | `true` | Enables speed-based extrapolation path |
 | `defaultAltitudeMeters` | `number` | `10` | Used when input records do not provide altitude |
-| `defaultHeadingRadians` | `number` | `0` | Used when heading is missing |
+| `defaultHeadingRadians` | `number` | `0` | Used when marker rotation is not provided |
 | `drawOrder` | `number` | `0` | Primitive ordering for same scene without depth test |
 | `shaderConfig` | `Partial<GpuPointLayerShaderConfig>` | internal defaults | Override uniform names |
 
@@ -220,13 +222,19 @@ Single-point hemisphere predicate.
 
 Minimum input shape accepted by `GpuPointLayer`.
 
+Marker rotation and animation direction are independent:
+- If `rotationRadians` is omitted, marker rotation falls back to `defaultHeadingRadians` from layer options.
+- If `movementDirectionRadians` is omitted and `rotationRadians` is present, motion follows marker rotation.
+- If both are provided, marker rotation and motion direction are used independently.
+
 ```ts
 interface BasePointRecord {
   id: string;
   longitude: number;
   latitude: number;
   altitudeMeters?: number;
-  headingRadians?: number;
+  rotationRadians?: number;
+  movementDirectionRadians?: number;
   speedMetersPerSecond?: number;
 }
 ```

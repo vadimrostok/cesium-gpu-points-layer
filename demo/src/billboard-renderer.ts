@@ -28,7 +28,7 @@ interface BillboardMotionState {
   altitudeMeters: number;
   directionX: number;
   directionY: number;
-  headingRadians: number;
+  rotationRadians: number;
   speedMetersPerSecond: number;
 }
 
@@ -123,19 +123,27 @@ export class BillboardRenderer {
     const rotationOffset = definition.rotationEnabled ? definition.headingOffsetRadians : 0;
 
     for (const record of records) {
-      const heading = isFiniteNumber(record.headingRadians) ? record.headingRadians : 0;
-      const headingNormalized = this.normalizeHeading(heading);
-      const hasHeading = isFiniteNumber(record.headingRadians);
+      const rotation = isFiniteNumber(record.rotationRadians) ? record.rotationRadians : 0;
+      const rotationNormalized = this.normalizeHeading(rotation);
+      const hasRotation = isFiniteNumber(record.rotationRadians);
       const altitudeMeters = isFiniteNumber(record.altitudeMeters)
         ? record.altitudeMeters
         : definition.defaultAltitudeMeters;
+      const hasMovementDirection = isFiniteNumber(record.movementDirectionRadians) || hasRotation;
+      const movementDirection = hasMovementDirection
+        ? isFiniteNumber(record.movementDirectionRadians)
+          ? record.movementDirectionRadians
+          : rotationNormalized
+        : 0;
       const speedMetersPerSecond =
         definition.enableAnimation && isFinitePositive(record.speedMetersPerSecond)
-          && hasHeading
+          && hasMovementDirection
           ? record.speedMetersPerSecond
           : 0;
-      const directionX = speedMetersPerSecond > 0 && hasHeading ? Math.cos(headingNormalized) : 0;
-      const directionY = speedMetersPerSecond > 0 && hasHeading ? Math.sin(headingNormalized) : 0;
+      const directionX =
+        speedMetersPerSecond > 0 && hasMovementDirection ? Math.cos(movementDirection) : 0;
+      const directionY =
+        speedMetersPerSecond > 0 && hasMovementDirection ? Math.sin(movementDirection) : 0;
 
       const position = Cesium.Cartesian3.fromDegrees(
         record.longitude,
@@ -152,7 +160,7 @@ export class BillboardRenderer {
         // I tried disabling depth test, but it produced worse performance
         disableDepthTestDistance: 0,
         alignedAxis: Cesium.Cartesian3.ZERO,
-        rotation: definition.rotationEnabled ? heading + rotationOffset : 0,
+        rotation: definition.rotationEnabled ? rotation + rotationOffset : 0,
         scaleByDistance: new Cesium.NearFarScalar(1_150_000, 0.5, 4_333_000, 0.1),
       });
 
@@ -163,7 +171,7 @@ export class BillboardRenderer {
         altitudeMeters,
         directionX,
         directionY,
-        headingRadians: headingNormalized,
+        rotationRadians: rotationNormalized,
         speedMetersPerSecond,
       };
       states.push(state);

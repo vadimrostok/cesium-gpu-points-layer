@@ -18,10 +18,25 @@ test('GpuPointLayer normalizes missing optional fields into defaults', () => {
       [
         { id: 'no-extra', longitude: 0, latitude: 0 },
         {
-          id: 'with-motion',
+          id: 'with-rotation-only',
           longitude: 1,
           latitude: 1,
-          headingRadians: Math.PI / 2,
+          rotationRadians: Math.PI / 2,
+          speedMetersPerSecond: 10,
+        },
+        {
+          id: 'with-movement-only',
+          longitude: 2,
+          latitude: 2,
+          movementDirectionRadians: Math.PI,
+          speedMetersPerSecond: 10,
+        },
+        {
+          id: 'with-rotation-and-movement',
+          longitude: 3,
+          latitude: 3,
+          rotationRadians: 0,
+          movementDirectionRadians: Math.PI / 2,
           speedMetersPerSecond: 10,
         },
         { id: 'invalid', longitude: Number.NaN, latitude: 0, altitudeMeters: 0 },
@@ -37,7 +52,7 @@ test('GpuPointLayer normalizes missing optional fields into defaults', () => {
     const pointLayer = internal.pointLayer;
 
     assert.equal(layer.drawOrder, 0);
-    assert.equal(pointLayer.allPoints.length, 2);
+    assert.equal(pointLayer.allPoints.length, 4);
 
     const noMotionPoint = pointLayer.allPoints.find((point) => point.id === 'no-extra');
     assert.ok(noMotionPoint);
@@ -46,24 +61,59 @@ test('GpuPointLayer normalizes missing optional fields into defaults', () => {
     assert.ok(Math.abs(noMotionPoint.directionX) < 1e-12);
     assert.equal(noMotionPoint.directionY, 0);
 
-    const withMotionPoint = pointLayer.allPoints.find((point) => point.id === 'with-motion');
-    assert.ok(withMotionPoint);
-    assert.ok(Math.abs(withMotionPoint.directionX) < 1e-12);
-    assert.ok(withMotionPoint.directionY > 0.99);
+    const withRotationOnlyPoint = pointLayer.allPoints.find(
+      (point) => point.id === 'with-rotation-only',
+    );
+    assert.ok(withRotationOnlyPoint);
+    assert.ok(Math.abs(withRotationOnlyPoint.headingRadians - Math.PI / 2) < 1e-12);
+    assert.ok(Math.abs(withRotationOnlyPoint.directionX) < 1e-12);
+    assert.ok(withRotationOnlyPoint.directionY > 0.99);
 
-    const eastboundPoint = /** @type {any} */ (
+    const withMovementOnlyPoint = pointLayer.allPoints.find(
+      (point) => point.id === 'with-movement-only',
+    );
+    assert.ok(withMovementOnlyPoint);
+    assert.equal(withMovementOnlyPoint.headingRadians, 0);
+    assert.ok(withMovementOnlyPoint.directionX < -0.99);
+    assert.ok(Math.abs(withMovementOnlyPoint.directionY) < 1e-12);
+
+    const withRotationAndMovementPoint = pointLayer.allPoints.find(
+      (point) => point.id === 'with-rotation-and-movement',
+    );
+    assert.ok(withRotationAndMovementPoint);
+    assert.equal(withRotationAndMovementPoint.headingRadians, 0);
+    assert.ok(Math.abs(withRotationAndMovementPoint.directionX) < 1e-12);
+    assert.ok(withRotationAndMovementPoint.directionY > 0.99);
+
+    const movementOnlyPrepared = /** @type {any} */ (
       internal.pointLayer.descriptor.prepareRecord({
-        id: 'eastbound',
+        id: 'movement-only-prepared',
         longitude: 1,
         latitude: 1,
-        headingRadians: 0,
+        movementDirectionRadians: 0,
         speedMetersPerSecond: 10,
       })
     );
-    assert.ok(eastboundPoint);
-    assert.ok(eastboundPoint.directionX > 0.99);
-    assert.ok(Math.abs(eastboundPoint.directionY) < 1e-12);
-    assert.equal(withMotionPoint.directionFromEarthCenter instanceof Cesium.Cartesian3, true);
+    assert.ok(movementOnlyPrepared);
+    assert.equal(movementOnlyPrepared.headingRadians, 0);
+    assert.ok(movementOnlyPrepared.directionX > 0.99);
+    assert.ok(Math.abs(movementOnlyPrepared.directionY) < 1e-12);
+
+    const spinOnlyPoint = /** @type {any} */ (
+      internal.pointLayer.descriptor.prepareRecord({
+        id: 'spin-only',
+        longitude: 1,
+        latitude: 1,
+        rotationRadians: Math.PI / 2,
+      })
+    );
+    assert.ok(spinOnlyPoint);
+    assert.equal(spinOnlyPoint.headingRadians, Math.PI / 2);
+    assert.equal(spinOnlyPoint.speedMetersPerSecond, 0);
+    assert.ok(Math.abs(spinOnlyPoint.directionX) < 1e-12);
+    assert.ok(Math.abs(spinOnlyPoint.directionY) < 1e-12);
+    assert.ok(spinOnlyPoint.directionFromEarthCenter instanceof Cesium.Cartesian3);
+    assert.ok(movementOnlyPrepared.directionFromEarthCenter instanceof Cesium.Cartesian3);
 
     layer.destroy();
   } finally {

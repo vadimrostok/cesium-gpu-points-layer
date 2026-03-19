@@ -46,7 +46,9 @@ const isBasePointRecord = (value: unknown): value is BasePointRecord => {
     isFiniteNumber(point.longitude) &&
     isFiniteNumber(point.latitude) &&
     (!('altitudeMeters' in point) || isFiniteNumber(point.altitudeMeters)) &&
-    (!('headingRadians' in point) || isFiniteNumber(point.headingRadians)) &&
+    (!('rotationRadians' in point) || isFiniteNumber(point.rotationRadians)) &&
+    (!('movementDirectionRadians' in point) ||
+      isFiniteNumber(point.movementDirectionRadians)) &&
     (!('speedMetersPerSecond' in point) || isFiniteNumber(point.speedMetersPerSecond))
   );
 };

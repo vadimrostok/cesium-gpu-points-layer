@@ -33,7 +33,10 @@ import type {
 import type { SvgSpriteRasterized } from './sprite-texture.js';
 
 interface GpuPreparedPoint
-  extends Omit<BasePointRecord, 'altitudeMeters' | 'headingRadians'>,
+  extends Omit<
+    BasePointRecord,
+    'altitudeMeters' | 'rotationRadians' | 'movementDirectionRadians'
+  >,
     PreparedPointRecord {
   altitudeMeters: number;
   headingRadians: number;
@@ -183,11 +186,15 @@ export class GpuPointLayer<TPoint extends BasePointRecord> {
     const altitudeMeters = isFiniteNumber(point.altitudeMeters)
       ? point.altitudeMeters
       : this.defaultAltitudeMeters;
-    const rawHeadingRadians = isFiniteNumber(point.headingRadians)
-      ? point.headingRadians
+    const hasRotationRadians = isFiniteNumber(point.rotationRadians);
+    // Marker rotation defaults when not explicitly set.
+    const rawRotationRadians = hasRotationRadians
+      ? point.rotationRadians
       : this.defaultHeadingRadians;
-    const hasHeading = isFiniteNumber(point.headingRadians);
-    const headingRadians = Cesium.Math.zeroToTwoPi(rawHeadingRadians);
+    const normalizedRotationRadians = isFiniteNumber(rawRotationRadians)
+      ? rawRotationRadians
+      : this.defaultHeadingRadians;
+    const headingRadians = Cesium.Math.zeroToTwoPi(normalizedRotationRadians);
 
     if (
       !isFiniteNumber(point.longitude) ||
@@ -211,8 +218,16 @@ export class GpuPointLayer<TPoint extends BasePointRecord> {
       this.enableAnimation && isFiniteNumber(point.speedMetersPerSecond)
         ? Math.max(point.speedMetersPerSecond, 0)
         : 0;
-    const directionX = speedMetersPerSecond > 0 && hasHeading ? Math.cos(headingRadians) : 0;
-    const directionY = speedMetersPerSecond > 0 && hasHeading ? Math.sin(headingRadians) : 0;
+    // If movement direction is not explicitly provided, inherit marker rotation for motion.
+    const hasMovementRadians = isFiniteNumber(point.movementDirectionRadians) || hasRotationRadians;
+    const rawMovementRadians = isFiniteNumber(point.movementDirectionRadians)
+      ? point.movementDirectionRadians
+      : headingRadians;
+    const movementRadians = hasMovementRadians
+      ? Cesium.Math.zeroToTwoPi(rawMovementRadians)
+      : 0;
+    const directionX = speedMetersPerSecond > 0 && hasMovementRadians ? Math.cos(movementRadians) : 0;
+    const directionY = speedMetersPerSecond > 0 && hasMovementRadians ? Math.sin(movementRadians) : 0;
 
     return {
       id: point.id,
