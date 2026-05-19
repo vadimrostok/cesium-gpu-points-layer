@@ -6,7 +6,6 @@ import { BillboardRenderer, type LayerDefinition, type RecordType } from './bill
 import { isPreparedGlobePoints, type PreparedGlobePoints } from './globe-data';
 import { GpuPointLayer, type BasePointRecord } from '../../src/index';
 
-console.log('import.meta.env', import.meta.env);
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_ACCESS_TOKEN;
 
 const STATUS_MESSAGE_ID = 'gpu-playground-status';
